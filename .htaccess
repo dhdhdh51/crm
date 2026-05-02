@@ -1,0 +1,5 @@
+# Deny direct access to sensitive directories
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(app|config|core|database|storage)(/.*)?$ - [F,L]
+</IfModule>
