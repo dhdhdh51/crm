@@ -1,8 +1,12 @@
 -- =====================================================
--- VastuVeda Realty CRM — Database Schema
+-- VastuVeda Realty CRM — Schema Only
 -- Engine: InnoDB | Charset: utf8mb4_unicode_ci
--- Version: 1.0.0
+-- Version: 2.0.0
+-- For fresh install with data: use install.sql instead
 -- =====================================================
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
 
 CREATE DATABASE IF NOT EXISTS vastuveda_crm
     CHARACTER SET utf8mb4
@@ -10,18 +14,30 @@ CREATE DATABASE IF NOT EXISTS vastuveda_crm
 
 USE vastuveda_crm;
 
-SET FOREIGN_KEY_CHECKS = 0;
+-- Drop in reverse-dependency order (safe re-run)
+DROP TABLE IF EXISTS attendance;
+DROP TABLE IF EXISTS activity_logs;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS salaries;
+DROP TABLE IF EXISTS bookings;
+DROP TABLE IF EXISTS site_visits;
+DROP TABLE IF EXISTS followups;
+DROP TABLE IF EXISTS leads;
+DROP TABLE IF EXISTS units;
+DROP TABLE IF EXISTS projects;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
 
 -- -------------------------------------------------------
 -- ROLES
 -- -------------------------------------------------------
 CREATE TABLE roles (
-    id        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    name      VARCHAR(50)  NOT NULL UNIQUE,
-    slug      VARCHAR(50)  NOT NULL UNIQUE,
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name        VARCHAR(50)  NOT NULL UNIQUE,
+    slug        VARCHAR(50)  NOT NULL UNIQUE,
     permissions JSON,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- USERS
@@ -47,7 +63,7 @@ CREATE TABLE users (
     INDEX idx_employee_id (employee_id),
     INDEX idx_role_id     (role_id),
     INDEX idx_is_active   (is_active)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- PROJECTS
@@ -68,7 +84,7 @@ CREATE TABLE projects (
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_status (status)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- UNITS / INVENTORY
@@ -89,40 +105,40 @@ CREATE TABLE units (
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     UNIQUE KEY uk_unit (project_id, unit_number),
     INDEX idx_project_status (project_id, status)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- LEADS
 -- -------------------------------------------------------
 CREATE TABLE leads (
-    id                   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    name                 VARCHAR(100) NOT NULL,
-    phone                VARCHAR(15)  NOT NULL,
-    email                VARCHAR(150),
-    source               ENUM('website','referral','walk_in','social_media',
-                              'advertisement','cold_call','other') DEFAULT 'website',
-    status               ENUM('new','hot','warm','cold','closed','lost') DEFAULT 'new',
+    id                    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name                  VARCHAR(100) NOT NULL,
+    phone                 VARCHAR(15)  NOT NULL,
+    email                 VARCHAR(150),
+    source                ENUM('website','referral','walk_in','social_media',
+                               'advertisement','cold_call','other') DEFAULT 'website',
+    status                ENUM('new','hot','warm','cold','closed','lost') DEFAULT 'new',
     interested_project_id INT UNSIGNED,
-    budget_min           DECIMAL(15,2),
-    budget_max           DECIMAL(15,2),
-    preferred_type       VARCHAR(100),
-    assigned_to          INT UNSIGNED,
-    notes                TEXT,
-    address              TEXT,
-    next_followup_date   DATE,
-    closed_value         DECIMAL(15,2),
-    created_by           INT UNSIGNED,
-    created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    budget_min            DECIMAL(15,2),
+    budget_max            DECIMAL(15,2),
+    preferred_type        VARCHAR(100),
+    assigned_to           INT UNSIGNED,
+    notes                 TEXT,
+    address               TEXT,
+    next_followup_date    DATE,
+    closed_value          DECIMAL(15,2),
+    created_by            INT UNSIGNED,
+    created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (interested_project_id) REFERENCES projects(id) ON DELETE SET NULL,
     FOREIGN KEY (assigned_to)           REFERENCES users(id)    ON DELETE SET NULL,
     FOREIGN KEY (created_by)            REFERENCES users(id)    ON DELETE SET NULL,
-    INDEX idx_status           (status),
-    INDEX idx_assigned_to      (assigned_to),
-    INDEX idx_next_followup    (next_followup_date),
-    INDEX idx_created_at       (created_at),
-    INDEX idx_source           (source)
-) ENGINE=InnoDB;
+    INDEX idx_status        (status),
+    INDEX idx_assigned_to   (assigned_to),
+    INDEX idx_next_followup (next_followup_date),
+    INDEX idx_created_at    (created_at),
+    INDEX idx_source        (source)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- FOLLOWUPS
@@ -140,10 +156,10 @@ CREATE TABLE followups (
     created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (lead_id)  REFERENCES leads(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id)  REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_lead_id      (lead_id),
-    INDEX idx_followup_date(followup_date),
-    INDEX idx_status       (status)
-) ENGINE=InnoDB;
+    INDEX idx_lead_id       (lead_id),
+    INDEX idx_followup_date (followup_date),
+    INDEX idx_status        (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- SITE VISITS
@@ -167,44 +183,44 @@ CREATE TABLE site_visits (
     INDEX idx_visit_date  (visit_date),
     INDEX idx_assigned_to (assigned_to),
     INDEX idx_status      (status)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- BOOKINGS
 -- -------------------------------------------------------
 CREATE TABLE bookings (
     id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    lead_id        INT UNSIGNED   NOT NULL,
-    unit_id        INT UNSIGNED   NOT NULL,
-    booking_date   DATE           NOT NULL,
-    total_amount   DECIMAL(15,2)  NOT NULL,
+    lead_id        INT UNSIGNED  NOT NULL,
+    unit_id        INT UNSIGNED  NOT NULL,
+    booking_date   DATE          NOT NULL,
+    total_amount   DECIMAL(15,2) NOT NULL,
     booking_amount DECIMAL(15,2),
     payment_status ENUM('pending','partial','completed') DEFAULT 'pending',
     handled_by     INT UNSIGNED,
     notes          TEXT,
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (lead_id)    REFERENCES leads(id)    ON DELETE RESTRICT,
-    FOREIGN KEY (unit_id)    REFERENCES units(id)    ON DELETE RESTRICT,
-    FOREIGN KEY (handled_by) REFERENCES users(id)    ON DELETE SET NULL,
-    INDEX idx_booking_date (booking_date),
-    INDEX idx_handled_by   (handled_by),
+    FOREIGN KEY (lead_id)    REFERENCES leads(id)  ON DELETE RESTRICT,
+    FOREIGN KEY (unit_id)    REFERENCES units(id)  ON DELETE RESTRICT,
+    FOREIGN KEY (handled_by) REFERENCES users(id)  ON DELETE SET NULL,
+    INDEX idx_booking_date   (booking_date),
+    INDEX idx_handled_by     (handled_by),
     INDEX idx_payment_status (payment_status)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- SALARIES / PAYROLL
 -- -------------------------------------------------------
 CREATE TABLE salaries (
     id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id        INT UNSIGNED   NOT NULL,
-    month          TINYINT        NOT NULL,
-    year           YEAR           NOT NULL,
-    base_salary    DECIMAL(10,2)  NOT NULL DEFAULT 0,
-    incentives     DECIMAL(10,2)  DEFAULT 0,
-    bonus          DECIMAL(10,2)  DEFAULT 0,
-    deductions     DECIMAL(10,2)  DEFAULT 0,
-    net_salary     DECIMAL(10,2)  GENERATED ALWAYS AS
+    user_id        INT UNSIGNED  NOT NULL,
+    month          TINYINT       NOT NULL,
+    year           YEAR          NOT NULL,
+    base_salary    DECIMAL(10,2) NOT NULL DEFAULT 0,
+    incentives     DECIMAL(10,2) DEFAULT 0,
+    bonus          DECIMAL(10,2) DEFAULT 0,
+    deductions     DECIMAL(10,2) DEFAULT 0,
+    net_salary     DECIMAL(10,2) GENERATED ALWAYS AS
                    (base_salary + incentives + bonus - deductions) STORED,
     payment_date   DATE,
     payment_status ENUM('pending','paid') DEFAULT 'pending',
@@ -213,10 +229,10 @@ CREATE TABLE salaries (
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id)      REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (generated_by) REFERENCES users(id) ON DELETE SET NULL,
-    UNIQUE KEY uk_salary (user_id, month, year),
-    INDEX idx_user_id    (user_id),
-    INDEX idx_year_month (year, month)
-) ENGINE=InnoDB;
+    UNIQUE KEY uk_salary    (user_id, month, year),
+    INDEX idx_user_id       (user_id),
+    INDEX idx_year_month    (year, month)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- NOTIFICATIONS
@@ -232,7 +248,7 @@ CREATE TABLE notifications (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_user_unread (user_id, is_read),
     INDEX idx_created_at  (created_at)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- ACTIVITY LOGS
@@ -247,10 +263,10 @@ CREATE TABLE activity_logs (
     ip_address VARCHAR(45),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    INDEX idx_user_id   (user_id),
-    INDEX idx_module    (module),
-    INDEX idx_created_at(created_at)
-) ENGINE=InnoDB;
+    INDEX idx_user_id    (user_id),
+    INDEX idx_module     (module),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------
 -- ATTENDANCE
@@ -274,6 +290,6 @@ CREATE TABLE attendance (
     INDEX idx_date    (date),
     INDEX idx_user_id (user_id),
     INDEX idx_status  (status)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
