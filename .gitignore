@@ -1,0 +1,18 @@
+# Extracted source archive (contents already committed at root)
+vastuveda_crm_fixed/
+vastuveda_crm_fixed.zip
+
+# PHP / server
+*.log
+storage/logs/*.log
+storage/uploads/**
+!storage/uploads/projects/.gitkeep
+!storage/uploads/employees/.gitkeep
+
+# Environment / config overrides
+.env
+config/database.local.php
+
+# OS
+.DS_Store
+Thumbs.db
