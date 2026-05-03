@@ -2,7 +2,7 @@
 return [
     'name'     => 'VastuVeda Realty CRM',
     'version'  => '1.0.0',
-    'debug'    => false,       // Set true only while debugging on the server
+    'debug'    => true,        // TEMP: set false once login is confirmed working
     'timezone' => 'Asia/Kolkata',
     'locale'   => 'en_IN',
     'currency' => '₹',
