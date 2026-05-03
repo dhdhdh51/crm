@@ -132,16 +132,17 @@ const DESCRIPTORS_URL = '<?= url("attendance/descriptors") ?>';
 const CHECKIN_URL     = '<?= url("attendance/mark-face") ?>';
 
 let video, canvas, ctx, knownDescriptors = [], currentMatch = null, detecting = false;
+let bootGeo = null; // cached from boot() location request — reused on first check-in
 
 // ── Permission + camera boot ───────────────────────────────────
 (async function boot() {
   // Show permission status panel
   setStatus('<i class="fa fa-spinner fa-spin"></i> Requesting camera & location access…', 'info');
 
-  // 1. Location — trigger pop-up immediately
+  // 1. Location — trigger pop-up immediately and cache result
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      () => {},
+      pos => { bootGeo = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
       () => {},
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -192,6 +193,7 @@ let video, canvas, ctx, knownDescriptors = [], currentMatch = null, detecting = 
 
 // ── Load models + descriptors after camera is live ─────────────
 async function loadModels() {
+  setStatus('<i class="fa fa-spinner fa-spin"></i> Loading face recognition models…', 'info');
   try {
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -199,11 +201,11 @@ async function loadModels() {
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
   } catch (e) {
-    setStatus('Failed to load face models. Check internet connection.', 'error');
+    setStatus('Failed to load face models. Check internet connection and reload.', 'error');
     return;
   }
   try {
-    const res  = await fetch(DESCRIPTORS_URL);
+    const res  = await fetch(DESCRIPTORS_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
     const data = await res.json();
     knownDescriptors = data.map(d => ({
       id: d.id, name: d.name, employee_id: d.employee_id,
@@ -216,7 +218,7 @@ async function loadModels() {
       knownDescriptors.length ? 'info' : 'warning'
     );
   } catch (e) {
-    setStatus('Could not load enrolled faces.', 'error');
+    setStatus('Could not load enrolled faces. Check your connection.', 'error');
   }
 }
 
@@ -306,15 +308,17 @@ function setStatus(msg, type) {
 
 // ── Geolocation helper ─────────────────────────────────────────
 function getPosition() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
+    // Reuse the boot-time location if it arrived (avoids extra 8s wait)
+    if (bootGeo) { const g = bootGeo; bootGeo = null; return resolve(g); }
     navigator.geolocation.getCurrentPosition(
       pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       err => {
         if (err.code === 1) setStatus('Location denied — check-in will be flagged.', 'warning');
         resolve(null); // proceed without geo
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
     );
   });
 }
@@ -335,7 +339,11 @@ async function postAttendance(action) {
 
 async function send(form) {
   try {
-    const res  = await fetch(CHECKIN_URL, { method: 'POST', body: form });
+    const res  = await fetch(CHECKIN_URL, {
+      method: 'POST',
+      body: form,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
     const data = await res.json();
     if (data._csrf) CSRF_TOKEN = data._csrf; // refresh token for next call
     setStatus(data.message, data.success ? 'success' : 'error');

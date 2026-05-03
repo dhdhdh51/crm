@@ -28,7 +28,8 @@ class CSRF {
     private static function isAjax(): bool {
         return !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
             || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
-            || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json');
+            || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json')
+            || str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data');
     }
 
     public static function check(): void {

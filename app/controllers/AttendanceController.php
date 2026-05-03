@@ -96,11 +96,13 @@ class AttendanceController extends Controller {
 
     private function validateGeo(int $userId, ?float $lat, ?float $lng): bool {
         if ($lat === null || $lng === null) return true;
-
-        $office = (new \App\Models\Setting())->getOffice();
-        if (!$office['lat'] || !$office['lng']) return true; // no office set — skip check
-
-        return $this->haversine((float)$office['lat'], (float)$office['lng'], $lat, $lng) <= $office['radius'];
+        try {
+            $office = (new \App\Models\Setting())->getOffice();
+            if (!$office['lat'] || !$office['lng']) return true;
+            return $this->haversine((float)$office['lat'], (float)$office['lng'], $lat, $lng) <= $office['radius'];
+        } catch (\Throwable $e) {
+            return true; // settings table not yet migrated — skip geo check
+        }
     }
 
     private function haversine(float $lat1, float $lng1, float $lat2, float $lng2): float {

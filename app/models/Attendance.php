@@ -131,13 +131,17 @@ class Attendance extends Model {
             );
             return $existing['id'];
         }
-        return $this->insert([
+        $row = [
             'user_id'   => $userId,
             'date'      => $date,
             'status'    => $status,
             'method'    => 'manual',
             'notes'     => $notes,
             'marked_by' => $markedBy,
-        ]);
+        ];
+        if ($date === date('Y-m-d')) {
+            $row['check_in'] = date('H:i:s');
+        }
+        return $this->insert($row);
     }
 }
