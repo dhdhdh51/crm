@@ -9,7 +9,7 @@ class ManagerMiddleware {
             header('Location: ' . url('/login'));
             exit;
         }
-        if (!Session::can(['admin', 'manager'])) {
+        if (!Session::can(['admin', 'manager', 'super_admin', 'hr'])) {
             Session::flash('error', 'Access denied. Manager privileges required.');
             header('Location: ' . url('/dashboard'));
             exit;

@@ -34,6 +34,24 @@ class Salary extends Model {
         );
     }
 
+    public function calcFromAttendance(int $userId, int $month, int $year, float $baseSalary): array {
+        $row = $this->db->fetch(
+            "SELECT SUM(status IN ('present','late')) AS days_present,
+                    SUM(status='half_day') AS half_days,
+                    SUM(status='absent')   AS absent_days,
+                    COUNT(*) AS total_days
+             FROM attendance WHERE user_id=? AND MONTH(date)=? AND YEAR(date)=?",
+            [$userId, $month, $year]
+        );
+        $present  = (int)($row['days_present'] ?? 0);
+        $half     = (int)($row['half_days'] ?? 0);
+        $absent   = (int)($row['absent_days'] ?? 0);
+        $workDays = max($present + $half + $absent, 1);
+        $earned   = round($baseSalary * ($present + $half * 0.5) / $workDays, 2);
+        $deduct   = round($baseSalary * $absent / $workDays, 2);
+        return ['base_salary'=>$baseSalary,'earned'=>$earned,'deductions'=>$deduct,'present'=>$present,'half'=>$half,'absent'=>$absent];
+    }
+
     public function totalPaidThisMonth(): float {
         return (float)$this->db->fetchColumn(
             "SELECT COALESCE(SUM(net_salary), 0) FROM salaries

@@ -53,21 +53,57 @@ class AttendanceController extends Controller {
     public function markByFace(): void {
         $this->verifyCsrf();
         $userId = Session::user()['id'];
-
         $action = $_POST['action'] ?? 'checkin';
+        $lat    = isset($_POST['lat']) ? (float)$_POST['lat'] : null;
+        $lng    = isset($_POST['lng']) ? (float)$_POST['lng'] : null;
+
+        // Save webcam snapshot
+        $image = null;
+        if (!empty($_POST['image_data'])) {
+            $image = $this->saveSnapshot($_POST['image_data'], $userId, $action);
+        }
+
+        // Geo-fence validation
+        $geoValid = $this->validateGeo($userId, $lat, $lng);
 
         if ($action === 'checkout') {
-            $done = $this->model->checkOut($userId);
-            $this->json(['success' => $done, 'message' => $done ? 'Checked out successfully.' : 'No active check-in found.']);
+            $done = $this->model->checkOutWithMeta($userId, $image, $lat, $lng);
+            $this->json(['success'=>$done, 'message'=>$done ? 'Checked out.' : 'No active check-in.']);
         }
 
-        $result = $this->model->checkIn($userId, 'face');
+        $result = $this->model->checkIn($userId, 'face', $image, $lat, $lng, $geoValid);
         if ($result === 'already_checked_in') {
-            $this->json(['success' => false, 'message' => 'Already checked in today.']);
+            $this->json(['success'=>false, 'message'=>'Already checked in today.']);
         }
+        logActivity('checkin', 'attendance', (int)$result, 'Face+location check-in');
+        $this->json(['success'=>true, 'message'=>'Check-in recorded.', 'geo_valid'=>$geoValid]);
+    }
 
-        logActivity('checkin', 'attendance', (int)$result, 'Face recognition check-in');
-        $this->json(['success' => true, 'message' => 'Check-in recorded successfully.']);
+    private function saveSnapshot(string $dataUri, int $userId, string $type): ?string {
+        $data = preg_replace('/^data:image\/\w+;base64,/', '', $dataUri);
+        $decoded = base64_decode($data);
+        if (!$decoded) return null;
+        $dir = ROOT.'/storage/uploads/attendance/';
+        if (!is_dir($dir)) mkdir($dir, 0755, true);
+        $fname = "{$type}_{$userId}_".date('Ymd_His').'.jpg';
+        file_put_contents($dir.$fname, $decoded);
+        return 'attendance/'.$fname;
+    }
+
+    private function validateGeo(int $userId, ?float $lat, ?float $lng): bool {
+        if ($lat === null || $lng === null) return true;
+        $user = $this->db->fetch("SELECT geo_lat,geo_lng,geo_radius FROM users WHERE id=?", [$userId]);
+        if (!$user || !$user['geo_lat']) return true;
+        $dist = $this->haversine((float)$user['geo_lat'], (float)$user['geo_lng'], $lat, $lng);
+        return $dist <= ($user['geo_radius'] ?? 200);
+    }
+
+    private function haversine(float $lat1, float $lng1, float $lat2, float $lng2): float {
+        $R = 6371000;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat/2)**2 + cos(deg2rad($lat1))*cos(deg2rad($lat2))*sin($dLng/2)**2;
+        return $R * 2 * atan2(sqrt($a), sqrt(1-$a));
     }
 
     /** Enroll face — show page */

@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Salary Slip – <?= e($slip['name']) ?></title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter',sans-serif;font-size:13px;color:#222;background:#f5f5f5;padding:20px}
+  body{font-family:'Montserrat',sans-serif;font-size:13px;color:#222;background:#f5f5f5;padding:20px}
   .slip{max-width:720px;margin:0 auto;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden}
   .slip-header{background:linear-gradient(135deg,#800000,#5a0000);color:#fff;padding:28px 32px;display:flex;justify-content:space-between;align-items:center}
   .slip-header h1{font-size:22px;font-weight:700;letter-spacing:.5px}

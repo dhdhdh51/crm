@@ -18,12 +18,22 @@ class PayrollController extends Controller {
         $this->view('payroll.create', ['title' => 'Process Salary', 'employees' => $employees]);
     }
 
+    /** AJAX: auto-calculate salary from attendance */
+    public function calcAttendance(): void {
+        $userId = (int)($_GET['user_id'] ?? 0);
+        $month  = (int)($_GET['month']   ?? date('n'));
+        $year   = (int)($_GET['year']    ?? date('Y'));
+        $base   = (float)($_GET['base']  ?? 0);
+        $this->json((new Salary())->calcFromAttendance($userId, $month, $year, $base));
+    }
+
     public function store(): void {
         $this->verifyCsrf();
 
         $userId = (int)($_POST['user_id'] ?? 0);
         $month  = (int)($_POST['month'] ?? date('n'));
-        $year   = (int)($_POST['year'] ?? date('Y'));
+        $year   = (int)($_POST['year']  ?? date('Y'));
+        $base   = (float)($_POST['base_salary'] ?? 0);
 
         $salaryModel = new Salary();
         if ($salaryModel->existsForMonth($userId, $month, $year)) {
@@ -31,14 +41,20 @@ class PayrollController extends Controller {
             $this->redirect('payroll/create');
         }
 
+        $deductions = (float)($_POST['deductions'] ?? 0);
+        if (!empty($_POST['auto_calc'])) {
+            $calc       = $salaryModel->calcFromAttendance($userId, $month, $year, $base);
+            $deductions = $calc['deductions'];
+        }
+
         $data = [
             'user_id'        => $userId,
             'month'          => $month,
             'year'           => $year,
-            'base_salary'    => (float)($_POST['base_salary'] ?? 0),
+            'base_salary'    => $base,
             'incentives'     => (float)($_POST['incentives'] ?? 0),
             'bonus'          => (float)($_POST['bonus'] ?? 0),
-            'deductions'     => (float)($_POST['deductions'] ?? 0),
+            'deductions'     => $deductions,
             'payment_status' => in_array($_POST['payment_status'] ?? '', ['pending','paid']) ? $_POST['payment_status'] : 'pending',
             'payment_date'   => !empty($_POST['payment_date']) ? $_POST['payment_date'] : null,
             'remarks'        => $this->sanitize($_POST['notes'] ?? ''),
@@ -55,6 +71,15 @@ class PayrollController extends Controller {
         $slip = (new Salary())->findSlip((int)$id);
         if (!$slip) $this->abort(404);
         $this->view('payroll.slip', ['title' => 'Salary Slip', 'slip' => $slip], 'auth');
+    }
+
+    public function mySlips(): void {
+        $userId = Session::user()['id'];
+        $slips  = $this->db->fetchAll(
+            "SELECT * FROM salaries WHERE user_id=? ORDER BY year DESC, month DESC",
+            [$userId]
+        );
+        $this->view('payroll.my_slips', ['title'=>'My Salary Slips','slips'=>$slips]);
     }
 
     public function delete(string $id): void {

@@ -80,34 +80,37 @@ class Attendance extends Model {
         );
     }
 
-    public function checkIn(int $userId, string $method = 'face', ?string $photo = null): int|string {
-        $existing = $this->todayRecord($userId);
-        if ($existing) {
-            return 'already_checked_in';
-        }
-
-        $hour = (int)date('H');
+    public function checkIn(int $userId, string $method = 'face', ?string $image = null, ?float $lat = null, ?float $lng = null, bool $geoValid = true): int|string {
+        if ($this->todayRecord($userId)) return 'already_checked_in';
+        $hour   = (int)date('H');
         $status = $hour >= 10 ? 'late' : 'present';
-
         return $this->insert([
-            'user_id'        => $userId,
-            'date'           => date('Y-m-d'),
-            'check_in'       => date('H:i:s'),
-            'status'         => $status,
-            'method'         => $method,
-            'check_in_photo' => $photo,
-            'marked_by'      => $userId,
+            'user_id'       => $userId,
+            'date'          => date('Y-m-d'),
+            'check_in'      => date('H:i:s'),
+            'status'        => $status,
+            'method'        => $method,
+            'checkin_image' => $image,
+            'checkin_lat'   => $lat,
+            'checkin_lng'   => $lng,
+            'geo_valid'     => $geoValid ? 1 : 0,
+            'marked_by'     => $userId,
         ]);
     }
 
     public function checkOut(int $userId): bool {
         $record = $this->todayRecord($userId);
-        if (!$record || $record['check_out']) {
-            return false;
-        }
+        if (!$record || $record['check_out']) return false;
+        $this->db->execute("UPDATE attendance SET check_out=? WHERE id=?", [date('H:i:s'), $record['id']]);
+        return true;
+    }
+
+    public function checkOutWithMeta(int $userId, ?string $image, ?float $lat, ?float $lng): bool {
+        $record = $this->todayRecord($userId);
+        if (!$record || $record['check_out']) return false;
         $this->db->execute(
-            "UPDATE attendance SET check_out = ? WHERE id = ?",
-            [date('H:i:s'), $record['id']]
+            "UPDATE attendance SET check_out=?,checkout_image=?,checkout_lat=?,checkout_lng=? WHERE id=?",
+            [date('H:i:s'), $image, $lat, $lng, $record['id']]
         );
         return true;
     }

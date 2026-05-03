@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($title ?? 'Dashboard') ?> — VastuVeda CRM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous">
 <link rel="stylesheet" href="<?= asset('css/app.css') ?>">
 </head>
@@ -30,8 +31,16 @@
     <a href="<?= url('leads') ?>" class="nav-item <?= isActive('leads') ?>">
       <i class="fa fa-users"></i><span>Leads</span>
     </a>
+    <?php if (\Core\Session::can(['admin','manager','super_admin','hr'])): ?>
+    <a href="<?= url('leads/upload') ?>" class="nav-item <?= isActive('leads/upload') ?>">
+      <i class="fa fa-file-csv"></i><span>Import Leads</span>
+    </a>
+    <?php endif; ?>
     <a href="<?= url('site-visits') ?>" class="nav-item <?= isActive('site-visits') ?>">
       <i class="fa fa-calendar-check"></i><span>Site Visits</span>
+    </a>
+    <a href="<?= url('targets') ?>" class="nav-item <?= isActive('targets') ?>">
+      <i class="fa fa-bullseye"></i><span>Targets</span>
     </a>
 
     <div class="nav-section-label">INVENTORY</div>
@@ -43,8 +52,11 @@
     <a href="<?= url('attendance') ?>" class="nav-item <?= isActive('attendance') ?>">
       <i class="fa fa-fingerprint"></i><span>Attendance</span>
     </a>
+    <a href="<?= url('my-slips') ?>" class="nav-item <?= isActive('my-slips') ?>">
+      <i class="fa fa-file-invoice-dollar"></i><span>My Slips</span>
+    </a>
 
-    <?php if (\Core\Session::can(['admin', 'manager'])): ?>
+    <?php if (\Core\Session::can(['admin','manager','super_admin','hr'])): ?>
     <div class="nav-section-label">MANAGEMENT</div>
     <a href="<?= url('employees') ?>" class="nav-item <?= isActive('employees') ?>">
       <i class="fa fa-id-badge"></i><span>Employees</span>
@@ -52,9 +64,12 @@
     <a href="<?= url('reports') ?>" class="nav-item <?= isActive('reports') ?>">
       <i class="fa fa-chart-bar"></i><span>Reports</span>
     </a>
+    <a href="<?= url('expenses') ?>" class="nav-item <?= isActive('expenses') ?>">
+      <i class="fa fa-receipt"></i><span>Expenses</span>
+    </a>
     <?php endif; ?>
 
-    <?php if (\Core\Session::can('admin')): ?>
+    <?php if (\Core\Session::can(['admin','super_admin'])): ?>
     <a href="<?= url('payroll') ?>" class="nav-item <?= isActive('payroll') ?>">
       <i class="fa fa-money-bill-wave"></i><span>Payroll</span>
     </a>

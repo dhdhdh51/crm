@@ -1,16 +1,15 @@
 <?php
 /** @var \Core\Router $router */
 
-// ── Public routes ──────────────────────────────────────────────────
-$router->get('/',           'AuthController@showLogin');
-$router->get('/login',      'AuthController@showLogin');
-$router->post('/login',     'AuthController@login');
-$router->get('/logout',     'AuthController@logout');
+// ── Public routes ────────────────────────────────────────────────────
+$router->get('/',       'AuthController@showLogin');
+$router->get('/login',  'AuthController@showLogin');
+$router->post('/login', 'AuthController@login');
+$router->get('/logout', 'AuthController@logout');
 
-// ── Authenticated routes ────────────────────────────────────────────
+// ── Authenticated routes ─────────────────────────────────────────────
 $router->group(['AuthMiddleware'], function ($r) {
 
-    // Dashboard
     $r->get('/dashboard', 'DashboardController@index');
 
     // Profile
@@ -21,6 +20,8 @@ $router->group(['AuthMiddleware'], function ($r) {
     $r->get('/leads',                'LeadController@index');
     $r->get('/leads/create',         'LeadController@create');
     $r->post('/leads/store',         'LeadController@store');
+    $r->get('/leads/upload',         'LeadUploadController@index');
+    $r->post('/leads/import',        'LeadUploadController@import');
     $r->get('/leads/{id}',           'LeadController@show');
     $r->get('/leads/{id}/edit',      'LeadController@edit');
     $r->post('/leads/{id}/update',   'LeadController@update');
@@ -35,7 +36,6 @@ $router->group(['AuthMiddleware'], function ($r) {
     $r->get('/projects/{id}/edit',         'ProjectController@edit');
     $r->post('/projects/{id}/update',      'ProjectController@update');
     $r->post('/projects/{id}/delete',      'ProjectController@delete');
-    // Units
     $r->get('/projects/{id}/units',        'ProjectController@units');
     $r->post('/projects/{id}/units/store', 'ProjectController@storeUnit');
     $r->post('/units/{id}/update',         'ProjectController@updateUnit');
@@ -65,9 +65,15 @@ $router->group(['AuthMiddleware'], function ($r) {
     $r->post('/attendance/manual',          'AttendanceController@manualMark');
     $r->get('/attendance/report',           'AttendanceController@report');
 
-    // ── Manager + Admin ──────────────────────────────────────────
+    // My salary slips (any authenticated user)
+    $r->get('/my-slips', 'PayrollController@mySlips');
+
+    // Targets (all staff can view)
+    $r->get('/targets', 'TargetController@index');
+
+    // ── Manager + Admin + HR ─────────────────────────────────────
     $r->group(['ManagerMiddleware'], function ($r) {
-        // Employees
+
         $r->get('/employees',              'EmployeeController@index');
         $r->get('/employees/create',       'EmployeeController@create');
         $r->post('/employees/store',       'EmployeeController@store');
@@ -76,20 +82,26 @@ $router->group(['AuthMiddleware'], function ($r) {
         $r->post('/employees/{id}/update', 'EmployeeController@update');
         $r->post('/employees/{id}/delete', 'EmployeeController@delete');
 
-        // Reports
         $r->get('/reports',             'ReportController@index');
         $r->get('/reports/leads',       'ReportController@leads');
         $r->get('/reports/sales',       'ReportController@sales');
         $r->get('/reports/performance', 'ReportController@performance');
+
+        $r->get('/targets/create',  'TargetController@create');
+        $r->post('/targets/store',  'TargetController@store');
+
+        $r->get('/expenses',               'ExpenseController@index');
+        $r->post('/expenses/store',        'ExpenseController@store');
+        $r->post('/expenses/{id}/delete',  'ExpenseController@delete');
     });
 
-    // ── Admin only ───────────────────────────────────────────────
+    // ── Admin + Super Admin only ─────────────────────────────────
     $r->group(['AdminMiddleware'], function ($r) {
-        // Payroll
-        $r->get('/payroll',                'PayrollController@index');
-        $r->get('/payroll/create',         'PayrollController@create');
-        $r->post('/payroll/store',         'PayrollController@store');
-        $r->get('/payroll/{id}/slip',      'PayrollController@slip');
-        $r->post('/payroll/{id}/delete',   'PayrollController@delete');
+        $r->get('/payroll',                  'PayrollController@index');
+        $r->get('/payroll/create',           'PayrollController@create');
+        $r->get('/payroll/calc-attendance',  'PayrollController@calcAttendance');
+        $r->post('/payroll/store',           'PayrollController@store');
+        $r->get('/payroll/{id}/slip',        'PayrollController@slip');
+        $r->post('/payroll/{id}/delete',     'PayrollController@delete');
     });
 });
