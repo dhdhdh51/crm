@@ -133,16 +133,43 @@ const CHECKIN_URL     = '<?= url("attendance/mark-face") ?>';
 
 let video, canvas, ctx, knownDescriptors = [], currentMatch = null, detecting = false;
 
-// ── HTTPS / mediaDevices guard ─────────────────────────────────
-const onHttp = location.protocol !== 'https:'
-             && location.hostname !== 'localhost'
-             && location.hostname !== '127.0.0.1';
-if (onHttp || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-  document.getElementById('httpsWarning').style.display = 'flex';
-  setStatus('Camera unavailable — site needs HTTPS. Use Manual Check-In below.', 'error');
-} else {
-  init();
-}
+// ── Request both permissions immediately on page load ──────────
+(async function requestPermissions() {
+  // 1. Location — ask right away so pop-up appears on page open
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      () => {},   // success — permission stored
+      () => {},   // denied — user will see browser pop-up and can decide
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  // 2. Camera — check if mediaDevices is available
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    // HTTP blocks mediaDevices entirely — show warning but still let manual work
+    document.getElementById('httpsWarning').style.display = 'flex';
+    setStatus('Camera requires HTTPS. Use Manual Check-In below.', 'error');
+    return;
+  }
+
+  // Try to get camera permission — this triggers the browser pop-up
+  try {
+    const testStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    // Permission granted — stop test stream, then start full init
+    testStream.getTracks().forEach(t => t.stop());
+    init();
+  } catch (e) {
+    if (e.name === 'NotAllowedError') {
+      setStatus('Camera permission denied. Click the 🔒 icon in your address bar → Allow Camera → reload the page.', 'error');
+    } else if (e.name === 'NotFoundError') {
+      setStatus('No camera found on this device. Use Manual Check-In below.', 'error');
+    } else if (e.name === 'NotReadableError') {
+      setStatus('Camera is in use by another app. Close it and reload.', 'error');
+    } else {
+      setStatus('Camera error: ' + e.message, 'error');
+    }
+  }
+})();
 
 // ── Init: camera first, then models (so user sees feed immediately) ──
 async function init() {
