@@ -94,30 +94,13 @@ class AttendanceController extends Controller {
         return 'attendance/'.$fname;
     }
 
-    // Default office coordinates — override per-user or set here
-    private const OFFICE_LAT    = 0.0;   // set your office latitude
-    private const OFFICE_LNG    = 0.0;   // set your office longitude
-    private const OFFICE_RADIUS = 100;   // metres
-
     private function validateGeo(int $userId, ?float $lat, ?float $lng): bool {
         if ($lat === null || $lng === null) return true;
 
-        $user = $this->db->fetch("SELECT geo_lat, geo_lng, geo_radius FROM users WHERE id = ?", [$userId]);
+        $office = (new \App\Models\Setting())->getOffice();
+        if (!$office['lat'] || !$office['lng']) return true; // no office set — skip check
 
-        // Use per-user coordinates if set, otherwise fall back to global office coords
-        if ($user && $user['geo_lat'] && $user['geo_lng']) {
-            $oLat   = (float)$user['geo_lat'];
-            $oLng   = (float)$user['geo_lng'];
-            $radius = (int)($user['geo_radius'] ?? self::OFFICE_RADIUS);
-        } elseif (self::OFFICE_LAT != 0.0 && self::OFFICE_LNG != 0.0) {
-            $oLat   = self::OFFICE_LAT;
-            $oLng   = self::OFFICE_LNG;
-            $radius = self::OFFICE_RADIUS;
-        } else {
-            return true; // no office coords configured — skip geo check
-        }
-
-        return $this->haversine($oLat, $oLng, $lat, $lng) <= $radius;
+        return $this->haversine((float)$office['lat'], (float)$office['lng'], $lat, $lng) <= $office['radius'];
     }
 
     private function haversine(float $lat1, float $lng1, float $lat2, float $lng2): float {

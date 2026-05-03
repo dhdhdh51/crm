@@ -133,63 +133,75 @@ const CHECKIN_URL     = '<?= url("attendance/mark-face") ?>';
 
 let video, canvas, ctx, knownDescriptors = [], currentMatch = null, detecting = false;
 
-// ── Request both permissions immediately on page load ──────────
-(async function requestPermissions() {
-  // 1. Location — ask right away so pop-up appears on page open
+// ── Permission + camera boot ───────────────────────────────────
+(async function boot() {
+  // Show permission status panel
+  setStatus('<i class="fa fa-spinner fa-spin"></i> Requesting camera & location access…', 'info');
+
+  // 1. Location — trigger pop-up immediately
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      () => {},   // success — permission stored
-      () => {},   // denied — user will see browser pop-up and can decide
+      () => {},
+      () => {},
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
 
-  // 2. Camera — check if mediaDevices is available
+  // 2. Camera
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    // HTTP blocks mediaDevices entirely — show warning but still let manual work
     document.getElementById('httpsWarning').style.display = 'flex';
     setStatus('Camera requires HTTPS. Use Manual Check-In below.', 'error');
     return;
   }
 
-  // Try to get camera permission — this triggers the browser pop-up
+  // Use Permissions API to check state first (avoids silent failure if already denied)
+  let camState = 'prompt';
+  try { camState = (await navigator.permissions.query({ name: 'camera' })).state; } catch(_) {}
+
+  if (camState === 'denied') {
+    setStatus('Camera blocked. Click the 🔒 icon in your address bar → Site Settings → Allow Camera → reload.', 'error');
+    return;
+  }
+
+  // ONE getUserMedia call — triggers the pop-up if not yet granted, then reuse stream
   try {
-    const testStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    // Permission granted — stop test stream, then start full init
-    testStream.getTracks().forEach(t => t.stop());
-    init();
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'user' }, width: { ideal: 480 }, height: { ideal: 360 } },
+      audio: false
+    });
+    // Attach stream to video immediately (user sees live feed)
+    video = document.getElementById('video');
+    video.onplaying = () => { if (!detecting) startDetection(); };
+    video.srcObject = stream;
+    const p = video.play();
+    if (p instanceof Promise) p.catch(() => {});
+    setTimeout(() => { if (!detecting && !video.paused) startDetection(); }, 2000);
+    setStatus('Camera active. Loading face models…', 'info');
+    // Load models + descriptors in background
+    loadModels();
   } catch (e) {
-    if (e.name === 'NotAllowedError') {
-      setStatus('Camera permission denied. Click the 🔒 icon in your address bar → Allow Camera → reload the page.', 'error');
-    } else if (e.name === 'NotFoundError') {
-      setStatus('No camera found on this device. Use Manual Check-In below.', 'error');
-    } else if (e.name === 'NotReadableError') {
-      setStatus('Camera is in use by another app. Close it and reload.', 'error');
-    } else {
-      setStatus('Camera error: ' + e.message, 'error');
-    }
+    const msgs = {
+      NotAllowedError:      'Camera permission denied. Click 🔒 → Allow Camera → reload.',
+      NotFoundError:        'No camera found on this device.',
+      NotReadableError:     'Camera in use by another app. Close Zoom/Teams and reload.',
+      OverconstrainedError: 'Camera not supported on this device.',
+    };
+    setStatus(msgs[e.name] || 'Camera error: ' + e.message, 'error');
   }
 })();
 
-// ── Init: camera first, then models (so user sees feed immediately) ──
-async function init() {
-  // Start camera immediately — don't make user wait for model download
-  await startCamera();
-
-  setStatus('Loading face detection models…', 'info');
-  let modelsOk = false;
+// ── Load models + descriptors after camera is live ─────────────
+async function loadModels() {
   try {
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
-    modelsOk = true;
   } catch (e) {
-    setStatus('Failed to load face models — check internet or use Manual Check-In.', 'error');
+    setStatus('Failed to load face models. Check internet connection.', 'error');
     return;
   }
-
   try {
     const res  = await fetch(DESCRIPTORS_URL);
     const data = await res.json();
@@ -197,36 +209,14 @@ async function init() {
       id: d.id, name: d.name, employee_id: d.employee_id,
       descriptor: new Float32Array(d.descriptor),
     }));
-    if (!knownDescriptors.length)
-      setStatus('Camera active. No enrolled faces yet — click "Enroll Face" first.', 'warning');
-    else
-      setStatus('Camera ready. Position your face in the frame.', 'info');
+    setStatus(
+      knownDescriptors.length
+        ? 'Ready. Position your face in the frame.'
+        : 'Camera active. No faces enrolled yet — click "Enroll Face".',
+      knownDescriptors.length ? 'info' : 'warning'
+    );
   } catch (e) {
     setStatus('Could not load enrolled faces.', 'error');
-  }
-}
-
-async function startCamera() {
-  const constraints = { video: { facingMode: { ideal: 'user' }, width: { ideal: 480 }, height: { ideal: 360 } }, audio: false };
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    video = document.getElementById('video');
-    video.onplaying = () => { if (!detecting) startDetection(); };
-    video.srcObject = stream;
-    // Do NOT call video.load() — it resets srcObject and kills the stream
-    const p = video.play();
-    if (p instanceof Promise) p.catch(() => {});
-    // Safety fallback: some browsers never fire 'playing' — start detection directly
-    setTimeout(() => { if (!detecting && !video.paused) startDetection(); }, 2000);
-    setStatus('Camera ready. Position your face in the frame.', 'info');
-  } catch (e) {
-    const msgs = {
-      NotFoundError:        'No camera found on this device.',
-      NotAllowedError:      'Camera permission denied. Click the 🔒 icon in your address bar → Allow Camera → reload.',
-      NotReadableError:     'Camera is in use by another app. Close Zoom/Teams and reload.',
-      OverconstrainedError: 'Camera constraints not supported — try a different browser.',
-    };
-    setStatus(msgs[e.name] || ('Camera error: ' + e.message), 'error');
   }
 }
 

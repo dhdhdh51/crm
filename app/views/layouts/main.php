@@ -73,6 +73,9 @@
     <a href="<?= url('payroll') ?>" class="nav-item <?= isActive('payroll') ?>">
       <i class="fa fa-money-bill-wave"></i><span>Payroll</span>
     </a>
+    <a href="<?= url('settings') ?>" class="nav-item <?= isActive('settings') ?>">
+      <i class="fa fa-gear"></i><span>Settings</span>
+    </a>
     <?php endif; ?>
 
     <div class="nav-section-label">ACCOUNT</div>

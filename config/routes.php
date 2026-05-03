@@ -97,6 +97,10 @@ $router->group(['AuthMiddleware'], function ($r) {
         $r->post('/expenses/{id}/delete',  'ExpenseController@delete');
     });
 
+    // Settings (admin/super_admin) — inside auth, enforced in controller
+    $r->get('/settings',         'SettingsController@index');
+    $r->post('/settings/office', 'SettingsController@saveOffice');
+
     // ── Admin + Super Admin only ─────────────────────────────────
     $r->group(['AdminMiddleware'], function ($r) {
         $r->get('/payroll',                  'PayrollController@index');
