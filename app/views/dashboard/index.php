@@ -4,7 +4,9 @@
     <p class="page-subtitle">Welcome back, <?= e(\Core\Session::user()['name'] ?? '') ?></p>
   </div>
   <div class="page-actions">
+    <?php if (\Core\Session::can(['admin','super_admin','hr'])): ?>
     <a href="<?= url('leads/create') ?>" class="btn btn-primary"><i class="fa fa-plus"></i> New Lead</a>
+    <?php endif; ?>
   </div>
 </div>
 

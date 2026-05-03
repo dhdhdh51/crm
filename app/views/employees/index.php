@@ -3,7 +3,7 @@
     <h1 class="page-title">Employees</h1>
     <p class="page-subtitle">Manage your team</p>
   </div>
-  <?php if (\Core\Session::can('admin')): ?>
+  <?php if (\Core\Session::can(['admin','super_admin'])): ?>
   <a href="<?= url('employees/create') ?>" class="btn btn-primary"><i class="fa fa-user-plus"></i> Add Employee</a>
   <?php endif; ?>
 </div>
@@ -42,8 +42,10 @@
             </td>
             <td class="table-actions">
               <a href="<?= url('employees/'.$emp['id']) ?>" class="action-btn" title="View"><i class="fa fa-eye"></i></a>
-              <?php if (\Core\Session::can('admin')): ?>
+              <?php if (\Core\Session::can(['admin','super_admin','hr'])): ?>
                 <a href="<?= url('employees/'.$emp['id'].'/edit') ?>" class="action-btn" title="Edit"><i class="fa fa-pen"></i></a>
+              <?php endif; ?>
+              <?php if (\Core\Session::can(['admin','super_admin'])): ?>
                 <form method="POST" action="<?= url('employees/'.$emp['id'].'/delete') ?>" class="inline-form" onsubmit="return confirm('Deactivate employee?')">
                   <?= csrf_field() ?>
                   <button type="submit" class="action-btn action-btn-danger" title="Deactivate"><i class="fa fa-ban"></i></button>

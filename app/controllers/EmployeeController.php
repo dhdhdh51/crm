@@ -20,14 +20,14 @@ class EmployeeController extends Controller {
     }
 
     public function create(): void {
-        if (!Session::can('admin')) $this->abort(403);
+        if (!Session::can(['admin','super_admin'])) $this->abort(403);
         $roles = $this->db->fetchAll("SELECT * FROM roles ORDER BY name");
         $this->view('employees.create', ['title' => 'Add Employee', 'roles' => $roles]);
     }
 
     public function store(): void {
         $this->verifyCsrf();
-        if (!Session::can('admin')) $this->abort(403);
+        if (!Session::can(['admin','super_admin'])) $this->abort(403);
 
         $empId = $this->sanitize($_POST['employee_id'] ?? '');
         if ($this->db->fetchColumn("SELECT COUNT(*) FROM users WHERE employee_id = ?", [$empId])) {
@@ -76,7 +76,7 @@ class EmployeeController extends Controller {
     }
 
     public function edit(string $id): void {
-        if (!Session::can('admin')) $this->abort(403);
+        if (!Session::can(['admin','super_admin','hr'])) $this->abort(403);
         $employee = $this->model->findWithRole((int)$id);
         if (!$employee) $this->abort(404);
         $roles = $this->db->fetchAll("SELECT * FROM roles ORDER BY name");
@@ -89,7 +89,7 @@ class EmployeeController extends Controller {
 
     public function update(string $id): void {
         $this->verifyCsrf();
-        if (!Session::can('admin')) $this->abort(403);
+        if (!Session::can(['admin','super_admin','hr'])) $this->abort(403);
 
         $geoLat = $_POST['geo_lat'] !== '' ? (float)$_POST['geo_lat'] : null;
         $geoLng = $_POST['geo_lng'] !== '' ? (float)$_POST['geo_lng'] : null;
@@ -120,7 +120,7 @@ class EmployeeController extends Controller {
 
     public function delete(string $id): void {
         $this->verifyCsrf();
-        if (!Session::can('admin')) $this->abort(403);
+        if (!Session::can(['admin','super_admin'])) $this->abort(403);
         if ((int)$id === Session::user()['id']) {
             Session::flash('error', 'Cannot delete your own account.');
             $this->redirect('employees');

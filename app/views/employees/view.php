@@ -9,7 +9,7 @@
       <i class="fa fa-fingerprint"></i> Enroll Face
     </a>
     <?php endif; ?>
-    <?php if (\Core\Session::can('admin')): ?>
+    <?php if (\Core\Session::can(['admin','super_admin','hr'])): ?>
     <a href="<?= url('employees/'.$employee['id'].'/edit') ?>" class="btn btn-secondary"><i class="fa fa-pen"></i> Edit</a>
     <?php endif; ?>
   </div>

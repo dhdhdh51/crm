@@ -79,7 +79,7 @@ class ProjectController extends Controller {
 
     public function delete(string $id): void {
         $this->verifyCsrf();
-        if (!Session::can('admin')) $this->abort(403);
+        if (!Session::can(['admin','super_admin'])) $this->abort(403);
         $this->model->delete((int)$id);
         logActivity('delete', 'projects', (int)$id, 'Project deleted');
         Session::flash('success', 'Project deleted.');
