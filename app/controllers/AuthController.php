@@ -18,16 +18,16 @@ class AuthController extends Controller {
     public function login(): void {
         $this->verifyCsrf();
 
-        $empId    = trim($_POST['employee_id'] ?? '');
-        $password = $_POST['password'] ?? '';
+        $identifier = trim($_POST['employee_id'] ?? '');
+        $password   = $_POST['password'] ?? '';
 
-        if (!$empId || !$password) {
-            Session::flash('error', 'Employee ID and password are required.');
+        if (!$identifier || !$password) {
+            Session::flash('error', 'Employee ID / Email and password are required.');
             $this->redirect('login');
         }
 
         $userModel = new User();
-        $user      = $userModel->findByEmployeeId($empId);
+        $user      = $userModel->findByEmailOrEmployeeId($identifier);
 
         if (!$user || !password_verify($password, $user['password'])) {
             Session::flash('error', 'Invalid credentials. Please try again.');

@@ -31,11 +31,11 @@
         <?= csrf_field() ?>
 
         <div class="form-group">
-          <label for="employee_id">Employee ID</label>
+          <label for="employee_id">Employee ID or Email</label>
           <div class="input-icon-wrap">
             <i class="fa fa-id-card"></i>
             <input type="text" id="employee_id" name="employee_id"
-                   class="form-control" placeholder="e.g. EMP001"
+                   class="form-control" placeholder="EMP001 or email@example.com"
                    value="<?= old('employee_id') ?>" required autocomplete="username">
           </div>
         </div>
@@ -58,7 +58,7 @@
         </button>
       </form>
 
-      <p class="auth-hint">Default: <strong>EMP001</strong> / <strong>Admin@1234</strong></p>
+      <p class="auth-hint">Default: <strong>EMP001</strong> or email / <strong>Admin@1234</strong></p>
     </div>
   </div>
 </div>

@@ -16,6 +16,16 @@ class User extends Model {
         );
     }
 
+    public function findByEmailOrEmployeeId(string $identifier): array|false {
+        return $this->db->fetch(
+            "SELECT u.*, r.name AS role_name, r.slug AS role_slug, r.permissions
+             FROM users u
+             JOIN roles r ON r.id = u.role_id
+             WHERE (u.employee_id = ? OR u.email = ?) AND u.is_active = 1 LIMIT 1",
+            [$identifier, $identifier]
+        );
+    }
+
     public function findWithRole(int $id): array|false {
         return $this->db->fetch(
             "SELECT u.*, r.name AS role_name, r.slug AS role_slug
