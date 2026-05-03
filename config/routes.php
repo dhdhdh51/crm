@@ -63,6 +63,7 @@ $router->group(['AuthMiddleware'], function ($r) {
     $r->get('/attendance/enroll/{id}',      'AttendanceController@enroll');
     $r->post('/attendance/save-descriptor', 'AttendanceController@saveDescriptor');
     $r->post('/attendance/manual',          'AttendanceController@manualMark');
+    $r->post('/attendance/checkout-manual', 'AttendanceController@checkoutManual');
     $r->get('/attendance/report',           'AttendanceController@report');
 
     // Salary slips — ownership enforced in controller

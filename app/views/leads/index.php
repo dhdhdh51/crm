@@ -3,7 +3,9 @@
     <h1 class="page-title">Leads</h1>
     <p class="page-subtitle">Manage your sales pipeline</p>
   </div>
+  <?php if (\Core\Session::can(['admin','super_admin','hr'])): ?>
   <a href="<?= url('leads/create') ?>" class="btn btn-primary"><i class="fa fa-plus"></i> Add Lead</a>
+  <?php endif; ?>
 </div>
 
 <!-- Filters -->

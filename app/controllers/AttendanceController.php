@@ -17,11 +17,12 @@ class AttendanceController extends Controller {
 
     /** Attendance list */
     public function index(): void {
+        $uid = Session::user()['id'];
         $filters = [
             'date'    => $_GET['date'] ?? '',
             'month'   => (int)($_GET['month'] ?? date('m')),
             'year'    => (int)($_GET['year'] ?? date('Y')),
-            'user_id' => Session::can(['admin', 'manager']) ? (int)($_GET['user_id'] ?? 0) : Session::user()['id'],
+            'user_id' => Session::can(['admin', 'manager', 'super_admin', 'hr']) ? (int)($_GET['user_id'] ?? 0) : $uid,
             'status'  => $_GET['status'] ?? '',
         ];
         if (!empty($filters['date'])) {
@@ -29,13 +30,14 @@ class AttendanceController extends Controller {
         }
 
         $records   = $this->model->allWithUsers($filters);
-        $employees = Session::can(['admin', 'manager']) ? (new User())->allWithRole() : [];
+        $employees = Session::can(['admin', 'manager', 'super_admin', 'hr']) ? (new User())->allWithRole() : [];
 
         $this->view('attendance.index', [
-            'title'     => 'Attendance',
-            'records'   => $records,
-            'employees' => $employees,
-            'filters'   => $filters,
+            'title'       => 'Attendance',
+            'records'     => $records,
+            'employees'   => $employees,
+            'filters'     => $filters,
+            'todayRecord' => $this->model->todayRecord($uid),
         ]);
     }
 
@@ -189,6 +191,18 @@ class AttendanceController extends Controller {
         }, $rows);
 
         $this->json($data);
+    }
+
+    /** Manual self-checkout (POST from attendance index) */
+    public function checkoutManual(): void {
+        $this->verifyCsrf();
+        $userId = (int)($_POST['user_id'] ?? Session::user()['id']);
+        if ($userId !== Session::user()['id'] && !Session::can(['admin', 'manager', 'super_admin', 'hr'])) {
+            $this->abort(403);
+        }
+        $done = $this->model->checkOut($userId);
+        Session::flash($done ? 'success' : 'error', $done ? 'Checked out successfully.' : 'No active check-in found.');
+        $this->redirect('attendance');
     }
 
     /** Monthly attendance report */

@@ -53,6 +53,10 @@ class LeadController extends Controller {
     }
 
     public function create(): void {
+        if (!Session::can(['admin', 'super_admin', 'hr'])) {
+            Session::flash('error', 'Only Admin / HR can add leads.');
+            $this->redirect('leads');
+        }
         $this->view('leads.create', [
             'title'     => 'Add Lead',
             'employees' => $this->userModel->salesExecutives(),
@@ -62,6 +66,7 @@ class LeadController extends Controller {
 
     public function store(): void {
         $this->verifyCsrf();
+        if (!Session::can(['admin', 'super_admin', 'hr'])) $this->abort(403);
         $data = $this->buildData($_POST);
         $data['created_by'] = Session::user()['id'];
 

@@ -1,12 +1,16 @@
-<?php /** @var array $records @var array $employees @var array $filters */ ?>
+<?php
+/** @var array $records @var array $employees @var array $filters @var array|false $todayRecord */
+$uid   = \Core\Session::user()['id'];
+$today = $todayRecord ?? false;
+?>
 
 <div class="page-header">
   <h2 class="page-title">Attendance</h2>
   <div class="page-actions">
     <a href="<?= url('attendance/checkin') ?>" class="btn btn-primary">
-      <i class="fa fa-camera"></i> Face Check-In
+      <i class="fa fa-camera"></i> Face Check-In / Out
     </a>
-    <?php if (\Core\Session::can(['admin','manager'])): ?>
+    <?php if (\Core\Session::can(['admin','manager','super_admin','hr'])): ?>
     <button class="btn btn-secondary" onclick="toggleManualForm()">
       <i class="fa fa-pen"></i> Mark Manual
     </button>
@@ -14,6 +18,53 @@
       <i class="fa fa-chart-bar"></i> Monthly Report
     </a>
     <?php endif; ?>
+  </div>
+</div>
+
+<!-- Today's quick status for every employee -->
+<div class="card mb-4" style="border-left:4px solid var(--maroon)">
+  <div class="card-body" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+    <div style="flex:1;min-width:180px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Today — <?= date('D, d M Y') ?></div>
+      <?php if (!$today): ?>
+        <span style="color:#dc3545;font-weight:600"><i class="fa fa-circle-xmark"></i> Not checked in yet</span>
+      <?php elseif ($today && !$today['check_out']): ?>
+        <span style="color:#198754;font-weight:600"><i class="fa fa-circle-check"></i> Checked in at <?= date('h:i A', strtotime($today['check_in'])) ?></span>
+        <span style="margin-left:10px;color:#fd7e14;font-weight:600"><i class="fa fa-clock"></i> Not checked out</span>
+      <?php else: ?>
+        <span style="color:#198754;font-weight:600"><i class="fa fa-circle-check"></i> <?= date('h:i A', strtotime($today['check_in'])) ?> → <?= date('h:i A', strtotime($today['check_out'])) ?></span>
+        &nbsp;<?= attendanceStatusBadge($today['status']) ?>
+      <?php endif; ?>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <?php if (!$today): ?>
+        <form method="POST" action="<?= url('attendance/manual') ?>">
+          <?= csrf_field() ?>
+          <input type="hidden" name="user_id" value="<?= $uid ?>">
+          <input type="hidden" name="date"    value="<?= date('Y-m-d') ?>">
+          <input type="hidden" name="status"  value="present">
+          <input type="hidden" name="notes"   value="Self check-in">
+          <button class="btn btn-primary btn-sm" onclick="return confirm('Mark yourself Present for today?')">
+            <i class="fa fa-right-to-bracket"></i> Check In
+          </button>
+        </form>
+      <?php elseif ($today && !$today['check_out']): ?>
+        <form method="POST" action="<?= url('attendance/checkout-manual') ?>">
+          <?= csrf_field() ?>
+          <input type="hidden" name="user_id" value="<?= $uid ?>">
+          <button class="btn btn-warning btn-sm" onclick="return confirm('Confirm check-out?')">
+            <i class="fa fa-right-from-bracket"></i> Check Out
+          </button>
+        </form>
+      <?php else: ?>
+        <span class="badge badge-success" style="padding:8px 14px">
+          <i class="fa fa-circle-check"></i> Attendance complete
+        </span>
+      <?php endif; ?>
+      <a href="<?= url('attendance/checkin') ?>" class="btn btn-outline btn-sm">
+        <i class="fa fa-camera"></i> Use Camera
+      </a>
+    </div>
   </div>
 </div>
 
