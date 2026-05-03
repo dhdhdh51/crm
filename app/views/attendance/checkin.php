@@ -144,17 +144,22 @@ if (onHttp || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
   init();
 }
 
-// ── Init: models → descriptors → camera ───────────────────────
+// ── Init: camera first, then models (so user sees feed immediately) ──
 async function init() {
+  // Start camera immediately — don't make user wait for model download
+  await startCamera();
+
   setStatus('Loading face detection models…', 'info');
+  let modelsOk = false;
   try {
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
+    modelsOk = true;
   } catch (e) {
-    setStatus('Failed to load face models. Check your internet connection.', 'error');
+    setStatus('Failed to load face models — check internet or use Manual Check-In.', 'error');
     return;
   }
 
@@ -166,12 +171,12 @@ async function init() {
       descriptor: new Float32Array(d.descriptor),
     }));
     if (!knownDescriptors.length)
-      setStatus('No enrolled faces. Click "Enroll Face" first.', 'warning');
+      setStatus('Camera active. No enrolled faces yet — click "Enroll Face" first.', 'warning');
+    else
+      setStatus('Camera ready. Position your face in the frame.', 'info');
   } catch (e) {
     setStatus('Could not load enrolled faces.', 'error');
   }
-
-  await startCamera();
 }
 
 async function startCamera() {
@@ -179,21 +184,20 @@ async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     video = document.getElementById('video');
-    // Attach onplaying BEFORE srcObject so event is never missed
     video.onplaying = () => { if (!detecting) startDetection(); };
     video.srcObject = stream;
-    video.load();
-    const playPromise = video.play();
-    if (playPromise) playPromise.catch(() => {});
-    // Fallback: if already playing/paused state after 1s, force start
-    setTimeout(() => { if (!detecting && video.readyState >= 2) startDetection(); }, 1000);
-    setStatus('Camera ready. Looking for your face…', 'info');
+    // Do NOT call video.load() — it resets srcObject and kills the stream
+    const p = video.play();
+    if (p instanceof Promise) p.catch(() => {});
+    // Safety fallback: some browsers never fire 'playing' — start detection directly
+    setTimeout(() => { if (!detecting && !video.paused) startDetection(); }, 2000);
+    setStatus('Camera ready. Position your face in the frame.', 'info');
   } catch (e) {
     const msgs = {
       NotFoundError:        'No camera found on this device.',
-      NotAllowedError:      'Camera permission denied. Tap 🔒 in address bar → Allow Camera.',
-      NotReadableError:     'Camera in use by another app. Close Zoom/Teams and reload.',
-      OverconstrainedError: 'Camera constraints not supported.',
+      NotAllowedError:      'Camera permission denied. Click the 🔒 icon in your address bar → Allow Camera → reload.',
+      NotReadableError:     'Camera is in use by another app. Close Zoom/Teams and reload.',
+      OverconstrainedError: 'Camera constraints not supported — try a different browser.',
     };
     setStatus(msgs[e.name] || ('Camera error: ' + e.message), 'error');
   }
@@ -209,16 +213,26 @@ async function detectFaces() {
   if (detecting) return;
   detecting = true;
   const detect = async () => {
-    if (!video || video.paused || video.ended) { detecting = false; return; }
-    const result = await faceapi
-      .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
-      .withFaceLandmarks(true)
-      .withFaceDescriptor();
+    if (!video || video.ended) { detecting = false; return; }
+    // Skip frame if paused but keep loop alive (don't permanently exit)
+    if (video.paused) { setTimeout(() => requestAnimationFrame(detect), 200); return; }
+
+    let result;
+    try {
+      result = await faceapi
+        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+    } catch (e) {
+      requestAnimationFrame(detect); return;
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (result) {
       const { box } = result.detection;
       ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 2;
       ctx.strokeRect(box.x, box.y, box.width, box.height);
+
       if (knownDescriptors.length) {
         let bestMatch = null, bestDist = 0.6;
         for (const k of knownDescriptors) {
@@ -236,13 +250,17 @@ async function detectFaces() {
           currentMatch = null;
           document.getElementById('btnCheckin').disabled = true;
           hideMatch();
-          setStatus('Face detected but not recognized. Enroll first.', 'warning');
+          setStatus('Face detected but not recognized. Please enroll first.', 'warning');
         }
+      } else {
+        // No enrolled faces — show box but don't overwrite the enroll warning
+        ctx.strokeStyle = '#fd7e14';
+        setStatus('Face detected. Click "Enroll Face" to register yourself first.', 'warning');
       }
     } else {
       currentMatch = null;
       document.getElementById('btnCheckin').disabled = true;
-      setStatus('Looking for your face…', 'info');
+      if (knownDescriptors.length) setStatus('Looking for your face…', 'info');
       hideMatch();
     }
     requestAnimationFrame(detect);
