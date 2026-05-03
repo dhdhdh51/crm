@@ -321,19 +321,19 @@ INSERT INTO roles (name, slug, permissions) VALUES
 -- -------------------------------------------------------
 INSERT INTO users (employee_id, name, email, phone, password, role_id, designation, department, join_date, is_active) VALUES
 ('EMP001', 'Rajesh Sharma', 'admin@vastuveda.com',  '9876543210',
- '$2y$12$M1CcklWDOfU5GUiHX3QmHOt8.ioJPPKWx5hN3.7xXX2u78fkJWDBm',
+ '$2y$12$c9Vd5ON5wpk3QeKrcX4vgOcKkpCoZXh6iRXoZkLK2onNejz1DHhAK',
  1, 'Managing Director',  'Administration', '2020-01-15', 1),
 ('EMP002', 'Priya Mehta',   'priya@vastuveda.com',  '9876543211',
- '$2y$12$M1CcklWDOfU5GUiHX3QmHOt8.ioJPPKWx5hN3.7xXX2u78fkJWDBm',
+ '$2y$12$c9Vd5ON5wpk3QeKrcX4vgOcKkpCoZXh6iRXoZkLK2onNejz1DHhAK',
  2, 'Sales Manager',      'Sales',          '2021-03-01', 1),
 ('EMP003', 'Amit Patel',    'amit@vastuveda.com',   '9876543212',
- '$2y$12$M1CcklWDOfU5GUiHX3QmHOt8.ioJPPKWx5hN3.7xXX2u78fkJWDBm',
+ '$2y$12$c9Vd5ON5wpk3QeKrcX4vgOcKkpCoZXh6iRXoZkLK2onNejz1DHhAK',
  3, 'Senior Sales Exec',  'Sales',          '2022-06-15', 1),
 ('EMP004', 'Sunita Verma',  'sunita@vastuveda.com', '9876543213',
- '$2y$12$M1CcklWDOfU5GUiHX3QmHOt8.ioJPPKWx5hN3.7xXX2u78fkJWDBm',
+ '$2y$12$c9Vd5ON5wpk3QeKrcX4vgOcKkpCoZXh6iRXoZkLK2onNejz1DHhAK',
  3, 'Sales Executive',    'Sales',          '2022-09-01', 1),
 ('EMP005', 'Ravi Krishnan', 'ravi@vastuveda.com',   '9876543214',
- '$2y$12$M1CcklWDOfU5GUiHX3QmHOt8.ioJPPKWx5hN3.7xXX2u78fkJWDBm',
+ '$2y$12$c9Vd5ON5wpk3QeKrcX4vgOcKkpCoZXh6iRXoZkLK2onNejz1DHhAK',
  3, 'Sales Executive',    'Sales',          '2023-01-10', 1);
 
 -- -------------------------------------------------------

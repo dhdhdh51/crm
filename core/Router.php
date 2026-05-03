@@ -20,7 +20,9 @@ class Router {
     }
 
     private function addRoute(string $method, string $path, string $handler, array $middleware): void {
-        $allMiddleware = array_merge(...$this->middlewareGroups, $middleware);
+        $groups = $this->middlewareGroups;
+        $groups[] = $middleware;
+        $allMiddleware = empty($groups) ? [] : array_merge(...$groups);
         $this->routes[] = [
             'method'     => $method,
             'pattern'    => $this->compile($path),
