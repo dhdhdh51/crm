@@ -148,7 +148,17 @@ let bootGeo = null; // cached from boot() location request — reused on first c
     );
   }
 
-  // 2. Camera
+  // 2. Camera — check HTTPS first (Chrome returns 'denied' from Permissions API on HTTP,
+  //    which would show a confusing "Camera blocked" message instead of the HTTPS warning)
+  const isSecure = location.protocol === 'https:'
+    || location.hostname === 'localhost'
+    || location.hostname === '127.0.0.1';
+  if (!isSecure) {
+    document.getElementById('httpsWarning').style.display = 'flex';
+    setStatus('Camera requires HTTPS. Use Manual Check-In below.', 'error');
+    return;
+  }
+
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     document.getElementById('httpsWarning').style.display = 'flex';
     setStatus('Camera requires HTTPS. Use Manual Check-In below.', 'error');
