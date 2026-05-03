@@ -1,5 +1,44 @@
-# Deny direct access to sensitive directories
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(app|config|core|database|storage)(/.*)?$ - [F,L]
+
+    # ── Block direct access to sensitive backend directories ──────────
+    RewriteRule ^(app|config|core|database|storage|scripts)(/.*)? - [F,L]
+
+    # ── Serve static assets from public/ (CSS, JS, images, models) ───
+    RewriteRule ^(assets/.+)$ public/$1 [L]
+
+    # ── Route all other requests through front controller ─────────────
+    RewriteRule ^(.*)$ public/index.php [QSA,L]
 </IfModule>
+
+# ── Security headers ──────────────────────────────────────────────────
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ── PHP settings ──────────────────────────────────────────────────────
+<IfModule mod_php.c>
+    php_flag display_errors Off
+    php_value upload_max_filesize 10M
+    php_value post_max_size 12M
+    php_value max_execution_time 60
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag display_errors Off
+    php_value upload_max_filesize 10M
+    php_value post_max_size 12M
+    php_value max_execution_time 60
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag display_errors Off
+    php_value upload_max_filesize 10M
+    php_value post_max_size 12M
+    php_value max_execution_time 60
+</IfModule>
+
