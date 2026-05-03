@@ -70,6 +70,10 @@ class PayrollController extends Controller {
     public function slip(string $id): void {
         $slip = (new Salary())->findSlip((int)$id);
         if (!$slip) $this->abort(404);
+        $uid = Session::user()['id'];
+        if ((int)$slip['user_id'] !== $uid && !Session::can(['admin', 'super_admin', 'hr'])) {
+            $this->abort(403);
+        }
         $this->view('payroll.slip', ['title' => 'Salary Slip', 'slip' => $slip], 'auth');
     }
 

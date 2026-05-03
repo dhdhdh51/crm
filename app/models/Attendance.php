@@ -22,9 +22,12 @@ class Attendance extends Model {
             $params[] = $filters['date'];
         }
         if (!empty($filters['month']) && !empty($filters['year'])) {
-            $where[] = 'MONTH(a.date) = ? AND YEAR(a.date) = ?';
-            $params[] = $filters['month'];
-            $params[] = $filters['year'];
+            // Use range instead of MONTH()/YEAR() so index on date is used
+            $from = sprintf('%04d-%02d-01', $filters['year'], $filters['month']);
+            $to   = date('Y-m-t', strtotime($from));
+            $where[]  = 'a.date BETWEEN ? AND ?';
+            $params[] = $from;
+            $params[] = $to;
         }
         if (!empty($filters['user_id'])) {
             $where[] = 'a.user_id = ?';
@@ -63,20 +66,21 @@ class Attendance extends Model {
     }
 
     public function teamSummaryForMonth(int $month, int $year): array {
+        $from = sprintf('%04d-%02d-01', $year, $month);
+        $to   = date('Y-m-t', strtotime($from));
         return $this->db->fetchAll(
             "SELECT u.id, u.name, u.employee_id AS emp_code,
-                    COUNT(a.id) AS total_days,
-                    SUM(a.status = 'present') AS present,
-                    SUM(a.status = 'absent')  AS absent,
-                    SUM(a.status = 'late')    AS late,
-                    SUM(a.status = 'half_day') AS half_day
+                    COUNT(a.id)                   AS total_days,
+                    SUM(a.status = 'present')     AS present,
+                    SUM(a.status = 'absent')      AS absent,
+                    SUM(a.status = 'late')        AS late,
+                    SUM(a.status = 'half_day')    AS half_day
              FROM users u
-             LEFT JOIN attendance a ON a.user_id = u.id
-                 AND MONTH(a.date) = ? AND YEAR(a.date) = ?
+             LEFT JOIN attendance a ON a.user_id = u.id AND a.date BETWEEN ? AND ?
              WHERE u.is_active = 1
-             GROUP BY u.id
+             GROUP BY u.id, u.name, u.employee_id
              ORDER BY u.name",
-            [$month, $year]
+            [$from, $to]
         );
     }
 

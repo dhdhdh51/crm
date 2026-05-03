@@ -126,68 +126,87 @@
 
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script>
-const MODEL_URL      = '<?= url("assets/face-models") ?>';
-const CSRF_TOKEN     = '<?= \Core\CSRF::token() ?>';
-const DESCRIPTORS_URL= '<?= url("attendance/descriptors") ?>';
-const CHECKIN_URL    = '<?= url("attendance/mark-face") ?>';
+const MODEL_URL       = '<?= url("assets/face-models") ?>';
+let   CSRF_TOKEN      = '<?= \Core\CSRF::token() ?>';
+const DESCRIPTORS_URL = '<?= url("attendance/descriptors") ?>';
+const CHECKIN_URL     = '<?= url("attendance/mark-face") ?>';
 
 let video, canvas, ctx, knownDescriptors = [], currentMatch = null, detecting = false;
 
-// Detect HTTP (no camera support)
-if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+// ── HTTPS / mediaDevices guard ─────────────────────────────────
+const onHttp = location.protocol !== 'https:'
+             && location.hostname !== 'localhost'
+             && location.hostname !== '127.0.0.1';
+if (onHttp || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
   document.getElementById('httpsWarning').style.display = 'flex';
   setStatus('Camera unavailable — site needs HTTPS. Use Manual Check-In below.', 'error');
 } else {
   init();
 }
 
+// ── Init: models → descriptors → camera ───────────────────────
 async function init() {
-  setStatus('Loading face detection models...', 'info');
+  setStatus('Loading face detection models…', 'info');
   try {
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
-  } catch(e) {
+  } catch (e) {
     setStatus('Failed to load face models. Check your internet connection.', 'error');
     return;
   }
 
   try {
-    const res = await fetch(DESCRIPTORS_URL);
+    const res  = await fetch(DESCRIPTORS_URL);
     const data = await res.json();
     knownDescriptors = data.map(d => ({
       id: d.id, name: d.name, employee_id: d.employee_id,
       descriptor: new Float32Array(d.descriptor),
     }));
-    if (knownDescriptors.length === 0) {
-      setStatus('No enrolled faces found. Click "Enroll Face" to register first.', 'warning');
-    }
-  } catch(e) {
+    if (!knownDescriptors.length)
+      setStatus('No enrolled faces. Click "Enroll Face" first.', 'warning');
+  } catch (e) {
     setStatus('Could not load enrolled faces.', 'error');
   }
 
+  await startCamera();
+}
+
+async function startCamera() {
+  // Try ideal constraints first (works on all devices)
+  const constraints = {
+    video: {
+      facingMode:  { ideal: 'user' },
+      width:       { ideal: 480 },
+      height:      { ideal: 360 },
+    },
+    audio: false,
+  };
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 480, height: 360, facingMode: 'user' }
-    });
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     video = document.getElementById('video');
     video.srcObject = stream;
-    video.addEventListener('playing', startDetection);
-    setStatus('Camera ready. Looking for your face...', 'info');
-  } catch(e) {
-    let msg = 'Camera access denied.';
-    if (e.name === 'NotFoundError')      msg = 'No camera found on this device.';
-    else if (e.name === 'NotAllowedError') msg = 'Camera permission denied. Click the 🔒 lock icon in your browser address bar and allow camera.';
-    else if (e.name === 'NotReadableError') msg = 'Camera is in use by another app. Close Zoom/Teams and reload.';
-    setStatus(msg, 'error');
+    // Explicitly call play() — required on some mobile browsers
+    await video.play().catch(() => {});
+    video.addEventListener('playing', startDetection, { once: true });
+    setStatus('Camera ready. Looking for your face…', 'info');
+  } catch (e) {
+    const msgs = {
+      NotFoundError:    'No camera found on this device.',
+      NotAllowedError:  'Camera permission denied. Tap the 🔒 lock icon → Allow Camera.',
+      NotReadableError: 'Camera in use by another app. Close Zoom/Teams and reload.',
+      OverconstrainedError: 'Camera does not support required constraints.',
+    };
+    setStatus(msgs[e.name] || 'Could not access camera: ' + e.message, 'error');
   }
 }
 
 function startDetection() {
   canvas = document.getElementById('overlay');
-  ctx = canvas.getContext('2d');
+  ctx    = canvas.getContext('2d');
   detectFaces();
 }
 
@@ -205,7 +224,7 @@ async function detectFaces() {
       const { box } = result.detection;
       ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 2;
       ctx.strokeRect(box.x, box.y, box.width, box.height);
-      if (knownDescriptors.length > 0) {
+      if (knownDescriptors.length) {
         let bestMatch = null, bestDist = 0.6;
         for (const k of knownDescriptors) {
           const d = faceapi.euclideanDistance(result.descriptor, k.descriptor);
@@ -228,7 +247,7 @@ async function detectFaces() {
     } else {
       currentMatch = null;
       document.getElementById('btnCheckin').disabled = true;
-      setStatus('Looking for your face...', 'info');
+      setStatus('Looking for your face…', 'info');
       hideMatch();
     }
     requestAnimationFrame(detect);
@@ -239,39 +258,62 @@ async function detectFaces() {
 function showMatch(m, dist) {
   document.getElementById('matchCard').style.display = 'block';
   document.getElementById('matchAvatar').textContent = m.name.charAt(0).toUpperCase();
-  document.getElementById('matchName').textContent = m.name;
-  document.getElementById('matchEmpId').textContent = m.employee_id;
+  document.getElementById('matchName').textContent   = m.name;
+  document.getElementById('matchEmpId').textContent  = m.employee_id;
   const conf = Math.round((1 - dist) * 100);
-  document.getElementById('matchConfidence').innerHTML = `<span class="badge badge-success">Confidence: ${conf}%</span>`;
+  document.getElementById('matchConfidence').innerHTML =
+    `<span class="badge badge-success">Confidence: ${conf}%</span>`;
 }
 function hideMatch() { document.getElementById('matchCard').style.display = 'none'; }
 
 function setStatus(msg, type) {
   const el = document.getElementById('statusMsg');
-  const icons = { info:'fa-circle-info', success:'fa-circle-check', warning:'fa-triangle-exclamation', error:'fa-circle-xmark' };
-  const colors= { info:'#6c757d', success:'#198754', warning:'#fd7e14', error:'#dc3545' };
+  const icons  = { info:'fa-circle-info', success:'fa-circle-check', warning:'fa-triangle-exclamation', error:'fa-circle-xmark' };
+  const colors = { info:'#6c757d', success:'#198754', warning:'#fd7e14', error:'#dc3545' };
   el.innerHTML = `<i class="fa ${icons[type]||'fa-circle-info'}"></i> ${msg}`;
-  el.style.color = colors[type]||'#6c757d';
+  el.style.color = colors[type] || '#6c757d';
 }
 
+// ── Geolocation helper ─────────────────────────────────────────
+function getPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      err => {
+        if (err.code === 1) setStatus('Location denied — check-in will be flagged.', 'warning');
+        resolve(null); // proceed without geo
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
+  });
+}
+
+// ── AJAX attendance ────────────────────────────────────────────
 async function postAttendance(action) {
+  setStatus('Processing…', 'info');
+  const geo  = await getPosition();
   const form = new FormData();
-  form.append('_token', CSRF_TOKEN);
+  form.append('_csrf',  CSRF_TOKEN);   // use _csrf (correct key)
   form.append('action', action);
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(pos => {
-      form.append('lat', pos.coords.latitude);
-      form.append('lng', pos.coords.longitude);
-      send(form, action);
-    }, () => send(form, action));
-  } else { send(form, action); }
+  if (geo) {
+    form.append('lat', geo.lat);
+    form.append('lng', geo.lng);
+  }
+  await send(form);
 }
 
-async function send(form, action) {
-  const res  = await fetch(CHECKIN_URL, { method:'POST', body:form });
-  const data = await res.json();
-  setStatus(data.message, data.success ? 'success' : 'error');
-  if (data.success) setTimeout(() => location.reload(), 1500);
+async function send(form) {
+  try {
+    const res  = await fetch(CHECKIN_URL, { method: 'POST', body: form });
+    const data = await res.json();
+    if (data._csrf) CSRF_TOKEN = data._csrf; // refresh token for next call
+    setStatus(data.message, data.success ? 'success' : 'error');
+    if (data.csrf_error) { setStatus('Session expired — please reload.', 'error'); return; }
+    if (data.success) setTimeout(() => location.reload(), 1800);
+  } catch (e) {
+    setStatus('Network error. Please try again.', 'error');
+  }
 }
 
 document.getElementById('btnCheckin').addEventListener('click', () => {
@@ -281,17 +323,13 @@ document.getElementById('btnCheckin').addEventListener('click', () => {
 const btnOut = document.getElementById('btnCheckout');
 if (btnOut) btnOut.addEventListener('click', () => postAttendance('checkout'));
 
-// Manual checkout button
 const btnManualOut = document.getElementById('btnManualOut');
 if (btnManualOut) {
   btnManualOut.addEventListener('click', async () => {
     const form = new FormData();
-    form.append('_token', CSRF_TOKEN);
+    form.append('_csrf',  CSRF_TOKEN);
     form.append('action', 'checkout');
-    const res  = await fetch(CHECKIN_URL, { method:'POST', body:form });
-    const data = await res.json();
-    if (data.success) location.reload();
-    else alert(data.message);
+    await send(form);
   });
 }
 </script>

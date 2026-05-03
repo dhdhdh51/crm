@@ -68,15 +68,17 @@ class AttendanceController extends Controller {
 
         if ($action === 'checkout') {
             $done = $this->model->checkOutWithMeta($userId, $image, $lat, $lng);
-            $this->json(['success'=>$done, 'message'=>$done ? 'Checked out.' : 'No active check-in.']);
+            $msg  = $done ? 'Checked out successfully.' : 'No active check-in found.';
+            $this->json(['success' => $done, 'message' => $msg, '_csrf' => \Core\CSRF::token()]);
         }
 
         $result = $this->model->checkIn($userId, 'face', $image, $lat, $lng, $geoValid);
         if ($result === 'already_checked_in') {
-            $this->json(['success'=>false, 'message'=>'Already checked in today.']);
+            $this->json(['success' => false, 'message' => 'Already checked in today.', '_csrf' => \Core\CSRF::token()]);
         }
+        $geoMsg = $geoValid ? '' : ' (outside office zone — flagged)';
         logActivity('checkin', 'attendance', (int)$result, 'Face+location check-in');
-        $this->json(['success'=>true, 'message'=>'Check-in recorded.', 'geo_valid'=>$geoValid]);
+        $this->json(['success' => true, 'message' => 'Check-in recorded.' . $geoMsg, 'geo_valid' => $geoValid, '_csrf' => \Core\CSRF::token()]);
     }
 
     private function saveSnapshot(string $dataUri, int $userId, string $type): ?string {
@@ -90,12 +92,30 @@ class AttendanceController extends Controller {
         return 'attendance/'.$fname;
     }
 
+    // Default office coordinates — override per-user or set here
+    private const OFFICE_LAT    = 0.0;   // set your office latitude
+    private const OFFICE_LNG    = 0.0;   // set your office longitude
+    private const OFFICE_RADIUS = 100;   // metres
+
     private function validateGeo(int $userId, ?float $lat, ?float $lng): bool {
         if ($lat === null || $lng === null) return true;
-        $user = $this->db->fetch("SELECT geo_lat,geo_lng,geo_radius FROM users WHERE id=?", [$userId]);
-        if (!$user || !$user['geo_lat']) return true;
-        $dist = $this->haversine((float)$user['geo_lat'], (float)$user['geo_lng'], $lat, $lng);
-        return $dist <= ($user['geo_radius'] ?? 200);
+
+        $user = $this->db->fetch("SELECT geo_lat, geo_lng, geo_radius FROM users WHERE id = ?", [$userId]);
+
+        // Use per-user coordinates if set, otherwise fall back to global office coords
+        if ($user && $user['geo_lat'] && $user['geo_lng']) {
+            $oLat   = (float)$user['geo_lat'];
+            $oLng   = (float)$user['geo_lng'];
+            $radius = (int)($user['geo_radius'] ?? self::OFFICE_RADIUS);
+        } elseif (self::OFFICE_LAT != 0.0 && self::OFFICE_LNG != 0.0) {
+            $oLat   = self::OFFICE_LAT;
+            $oLng   = self::OFFICE_LNG;
+            $radius = self::OFFICE_RADIUS;
+        } else {
+            return true; // no office coords configured — skip geo check
+        }
+
+        return $this->haversine($oLat, $oLng, $lat, $lng) <= $radius;
     }
 
     private function haversine(float $lat1, float $lng1, float $lat2, float $lng2): float {
@@ -188,12 +208,14 @@ class AttendanceController extends Controller {
         ]);
     }
 
-    /** Manual attendance mark (admin/manager) */
+    /** Manual attendance mark (admin/manager or self) */
     public function manualMark(): void {
         $this->verifyCsrf();
-        if (!Session::can(['admin', 'manager'])) $this->abort(403);
-
         $userId  = (int)($_POST['user_id'] ?? 0);
+        $selfMark = $userId === Session::user()['id'];
+        if (!$selfMark && !Session::can(['admin', 'manager', 'super_admin', 'hr'])) {
+            $this->abort(403);
+        }
         $date    = $_POST['date'] ?? date('Y-m-d');
         $status  = $this->sanitize($_POST['status'] ?? 'present');
         $notes   = $this->sanitize($_POST['notes'] ?? '');

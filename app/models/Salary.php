@@ -35,13 +35,16 @@ class Salary extends Model {
     }
 
     public function calcFromAttendance(int $userId, int $month, int $year, float $baseSalary): array {
-        $row = $this->db->fetch(
+        $from = sprintf('%04d-%02d-01', $year, $month);
+        $to   = date('Y-m-t', strtotime($from));
+        $row  = $this->db->fetch(
             "SELECT SUM(status IN ('present','late')) AS days_present,
-                    SUM(status='half_day') AS half_days,
-                    SUM(status='absent')   AS absent_days,
+                    SUM(status = 'half_day') AS half_days,
+                    SUM(status = 'absent')   AS absent_days,
                     COUNT(*) AS total_days
-             FROM attendance WHERE user_id=? AND MONTH(date)=? AND YEAR(date)=?",
-            [$userId, $month, $year]
+             FROM attendance
+             WHERE user_id = ? AND date BETWEEN ? AND ?",
+            [$userId, $from, $to]
         );
         $present  = (int)($row['days_present'] ?? 0);
         $half     = (int)($row['half_days'] ?? 0);

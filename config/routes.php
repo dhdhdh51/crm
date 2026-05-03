@@ -65,8 +65,9 @@ $router->group(['AuthMiddleware'], function ($r) {
     $r->post('/attendance/manual',          'AttendanceController@manualMark');
     $r->get('/attendance/report',           'AttendanceController@report');
 
-    // My salary slips (any authenticated user)
-    $r->get('/my-slips', 'PayrollController@mySlips');
+    // Salary slips — ownership enforced in controller
+    $r->get('/my-slips',           'PayrollController@mySlips');
+    $r->get('/payroll/{id}/slip',  'PayrollController@slip');
 
     // Targets (all staff can view)
     $r->get('/targets', 'TargetController@index');
@@ -101,7 +102,6 @@ $router->group(['AuthMiddleware'], function ($r) {
         $r->get('/payroll/create',           'PayrollController@create');
         $r->get('/payroll/calc-attendance',  'PayrollController@calcAttendance');
         $r->post('/payroll/store',           'PayrollController@store');
-        $r->get('/payroll/{id}/slip',        'PayrollController@slip');
         $r->post('/payroll/{id}/delete',     'PayrollController@delete');
     });
 });
