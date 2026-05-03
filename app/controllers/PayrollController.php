@@ -39,8 +39,10 @@ class PayrollController extends Controller {
             'incentives'     => (float)($_POST['incentives'] ?? 0),
             'bonus'          => (float)($_POST['bonus'] ?? 0),
             'deductions'     => (float)($_POST['deductions'] ?? 0),
-            'payment_status' => $this->sanitize($_POST['payment_status'] ?? 'pending'),
-            'notes'          => $this->sanitize($_POST['notes'] ?? ''),
+            'payment_status' => in_array($_POST['payment_status'] ?? '', ['pending','paid']) ? $_POST['payment_status'] : 'pending',
+            'payment_date'   => !empty($_POST['payment_date']) ? $_POST['payment_date'] : null,
+            'remarks'        => $this->sanitize($_POST['notes'] ?? ''),
+            'generated_by'   => Session::user()['id'],
         ];
 
         $id = $salaryModel->insert($data);

@@ -46,12 +46,15 @@
         <label>Payment Status</label>
         <select name="payment_status" class="form-control">
           <option value="pending">Pending</option>
-          <option value="processing">Processing</option>
           <option value="paid">Paid</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Payment Date</label>
+        <input type="date" name="payment_date" class="form-control">
+      </div>
       <div class="form-group span-2">
-        <label>Notes</label>
+        <label>Notes / Remarks</label>
         <textarea name="notes" class="form-control" rows="2"></textarea>
       </div>
     </div>
