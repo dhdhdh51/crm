@@ -175,32 +175,27 @@ async function init() {
 }
 
 async function startCamera() {
-  // Try ideal constraints first (works on all devices)
-  const constraints = {
-    video: {
-      facingMode:  { ideal: 'user' },
-      width:       { ideal: 480 },
-      height:      { ideal: 360 },
-    },
-    audio: false,
-  };
-
+  const constraints = { video: { facingMode: { ideal: 'user' }, width: { ideal: 480 }, height: { ideal: 360 } }, audio: false };
   try {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     video = document.getElementById('video');
+    // Attach onplaying BEFORE srcObject so event is never missed
+    video.onplaying = () => { if (!detecting) startDetection(); };
     video.srcObject = stream;
-    // Explicitly call play() — required on some mobile browsers
-    await video.play().catch(() => {});
-    video.addEventListener('playing', startDetection, { once: true });
+    video.load();
+    const playPromise = video.play();
+    if (playPromise) playPromise.catch(() => {});
+    // Fallback: if already playing/paused state after 1s, force start
+    setTimeout(() => { if (!detecting && video.readyState >= 2) startDetection(); }, 1000);
     setStatus('Camera ready. Looking for your face…', 'info');
   } catch (e) {
     const msgs = {
-      NotFoundError:    'No camera found on this device.',
-      NotAllowedError:  'Camera permission denied. Tap the 🔒 lock icon → Allow Camera.',
-      NotReadableError: 'Camera in use by another app. Close Zoom/Teams and reload.',
-      OverconstrainedError: 'Camera does not support required constraints.',
+      NotFoundError:        'No camera found on this device.',
+      NotAllowedError:      'Camera permission denied. Tap 🔒 in address bar → Allow Camera.',
+      NotReadableError:     'Camera in use by another app. Close Zoom/Teams and reload.',
+      OverconstrainedError: 'Camera constraints not supported.',
     };
-    setStatus(msgs[e.name] || 'Could not access camera: ' + e.message, 'error');
+    setStatus(msgs[e.name] || ('Camera error: ' + e.message), 'error');
   }
 }
 
