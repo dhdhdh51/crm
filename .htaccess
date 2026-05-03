@@ -10,6 +10,10 @@ DirectoryIndex index.php
     # ── Serve static assets from public/ (CSS, JS, images, models) ───
     RewriteRule ^(assets/.+)$ public/$1 [L]
 
+    # ── Allow direct access to real files inside public/ ─────────────
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
+    RewriteRule ^([^/]+\.(php|css|js|png|jpg|gif|ico|woff2?|ttf|svg|webp))$ public/$1 [L]
+
     # ── Route all other requests through front controller ─────────────
     RewriteRule ^(.*)$ public/index.php [QSA,L]
 </IfModule>

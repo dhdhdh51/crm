@@ -30,32 +30,26 @@ try {
     $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
     echo "Tables (" . count($tables) . "): " . implode(', ', $tables) . "\n";
 
-    // 5. Check users
-    $count = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
-    echo "Users in DB: $count\n";
-
-    if ($count > 0) {
-        $user = $pdo->query("SELECT employee_id, email, LEFT(password,7) as pw_prefix, is_active FROM users LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
-        echo "Sample users:\n";
-        foreach ($user as $u) {
-            echo "  {$u['employee_id']} | {$u['email']} | pw_prefix:{$u['pw_prefix']} | active:{$u['is_active']}\n";
+    if (in_array('users', $tables)) {
+        $users = $pdo->query("SELECT employee_id, email, password, is_active FROM users LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+        echo "\nUsers:\n";
+        foreach ($users as $u) {
+            $pwOk = password_verify('Admin@1234', $u['password']) ? 'Admin@1234 OK' : 'WRONG HASH';
+            echo "  {$u['employee_id']} | {$u['email']} | active:{$u['is_active']} | pw: $pwOk\n";
         }
     }
 } catch (PDOException $e) {
     echo "DB ERROR: " . $e->getMessage() . "\n";
 }
 
-// 6. Session test
+// 5. Session test
 session_name('VVCRMSS_TEST');
 session_start();
 $_SESSION['test'] = time();
 echo "\nSession: " . (isset($_SESSION['test']) ? 'OK' : 'FAILED') . "\n";
-echo "Session save path: " . ini_get('session.save_path') . "\n";
 session_destroy();
 
-// 7. mod_rewrite
-echo "\nSERVER_SOFTWARE: " . ($_SERVER['SERVER_SOFTWARE'] ?? 'unknown') . "\n";
-echo "SCRIPT_NAME: " . ($_SERVER['SCRIPT_NAME'] ?? 'unknown') . "\n";
+echo "\nSCRIPT_NAME: " . ($_SERVER['SCRIPT_NAME'] ?? 'unknown') . "\n";
 echo "REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'unknown') . "\n";
 
-echo "</pre><p style='color:red'><b>Delete public/check.php after fixing!</b></p>";
+echo "</pre><p style='color:red'><b>DELETE public/check.php after fixing!</b></p>";
