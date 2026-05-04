@@ -54,6 +54,11 @@ $router->group(['AuthMiddleware'], function ($r) {
     $r->post('/notifications/read-all', 'NotificationController@markAllRead');
     $r->get('/notifications/unread',    'NotificationController@unreadCount');
 
+    // Attendance
+    $r->get('/attendance',         'AttendanceController@index');
+    $r->get('/attendance/checkin', 'AttendanceController@checkin');
+    $r->post('/attendance/mark',   'AttendanceController@mark');
+
     // Salary slips — ownership enforced in controller
     $r->get('/my-slips',           'PayrollController@mySlips');
     $r->get('/payroll/{id}/slip',  'PayrollController@slip');
@@ -83,7 +88,14 @@ $router->group(['AuthMiddleware'], function ($r) {
         $r->get('/expenses',               'ExpenseController@index');
         $r->post('/expenses/store',        'ExpenseController@store');
         $r->post('/expenses/{id}/delete',  'ExpenseController@delete');
+
+        $r->get('/settings/attendance',    'SettingsController@attendanceLogs');
+        $r->post('/attendance/manual-mark','AttendanceController@manualMark');
     });
+
+    // Settings — geo-fence (admin/hr enforced in controller)
+    $r->get('/settings/geo',  'SettingsController@geo');
+    $r->post('/settings/geo', 'SettingsController@saveGeo');
 
     // ── Admin + Super Admin only ─────────────────────────────────
     $r->group(['AdminMiddleware'], function ($r) {

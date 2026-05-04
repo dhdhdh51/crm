@@ -49,7 +49,10 @@
     </a>
 
     <div class="nav-section-label">HR</div>
-<a href="<?= url('my-slips') ?>" class="nav-item <?= isActive('my-slips') ?>">
+    <a href="<?= url('attendance') ?>" class="nav-item <?= isActive('attendance') ?>">
+      <i class="fa fa-fingerprint"></i><span>Attendance</span>
+    </a>
+    <a href="<?= url('my-slips') ?>" class="nav-item <?= isActive('my-slips') ?>">
       <i class="fa fa-file-invoice-dollar"></i><span>My Slips</span>
     </a>
 
@@ -63,6 +66,15 @@
     </a>
     <a href="<?= url('expenses') ?>" class="nav-item <?= isActive('expenses') ?>">
       <i class="fa fa-receipt"></i><span>Expenses</span>
+    </a>
+    <?php endif; ?>
+
+    <?php if (\Core\Session::can(['admin','super_admin','hr','manager'])): ?>
+    <a href="<?= url('settings/attendance') ?>" class="nav-item <?= isActive('settings/attendance') ?>">
+      <i class="fa fa-table-list"></i><span>Attendance Logs</span>
+    </a>
+    <a href="<?= url('settings/geo') ?>" class="nav-item <?= isActive('settings/geo') ?>">
+      <i class="fa fa-location-dot"></i><span>Geo-fence</span>
     </a>
     <?php endif; ?>
 
