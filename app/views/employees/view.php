@@ -4,12 +4,7 @@
     <p class="page-subtitle"><a href="<?= url('employees') ?>">Employees</a> / <?= e($employee['name']) ?></p>
   </div>
   <div class="d-flex gap-2">
-    <?php if (\Core\Session::can(['admin','manager'])): ?>
-    <a href="<?= url('attendance/enroll/'.$employee['id']) ?>" class="btn btn-outline">
-      <i class="fa fa-fingerprint"></i> Enroll Face
-    </a>
-    <?php endif; ?>
-    <?php if (\Core\Session::can(['admin','super_admin','hr'])): ?>
+<?php if (\Core\Session::can(['admin','super_admin','hr'])): ?>
     <a href="<?= url('employees/'.$employee['id'].'/edit') ?>" class="btn btn-secondary"><i class="fa fa-pen"></i> Edit</a>
     <?php endif; ?>
   </div>

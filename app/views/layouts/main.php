@@ -49,10 +49,7 @@
     </a>
 
     <div class="nav-section-label">HR</div>
-    <a href="<?= url('attendance') ?>" class="nav-item <?= isActive('attendance') ?>">
-      <i class="fa fa-fingerprint"></i><span>Attendance</span>
-    </a>
-    <a href="<?= url('my-slips') ?>" class="nav-item <?= isActive('my-slips') ?>">
+<a href="<?= url('my-slips') ?>" class="nav-item <?= isActive('my-slips') ?>">
       <i class="fa fa-file-invoice-dollar"></i><span>My Slips</span>
     </a>
 
@@ -72,9 +69,6 @@
     <?php if (\Core\Session::can(['admin','super_admin'])): ?>
     <a href="<?= url('payroll') ?>" class="nav-item <?= isActive('payroll') ?>">
       <i class="fa fa-money-bill-wave"></i><span>Payroll</span>
-    </a>
-    <a href="<?= url('settings') ?>" class="nav-item <?= isActive('settings') ?>">
-      <i class="fa fa-gear"></i><span>Settings</span>
     </a>
     <?php endif; ?>
 

@@ -18,16 +18,7 @@ class PayrollController extends Controller {
         $this->view('payroll.create', ['title' => 'Process Salary', 'employees' => $employees]);
     }
 
-    /** AJAX: auto-calculate salary from attendance */
-    public function calcAttendance(): void {
-        $userId = (int)($_GET['user_id'] ?? 0);
-        $month  = (int)($_GET['month']   ?? date('n'));
-        $year   = (int)($_GET['year']    ?? date('Y'));
-        $base   = (float)($_GET['base']  ?? 0);
-        $this->json((new Salary())->calcFromAttendance($userId, $month, $year, $base));
-    }
-
-    public function store(): void {
+public function store(): void {
         $this->verifyCsrf();
 
         $userId = (int)($_POST['user_id'] ?? 0);
@@ -42,10 +33,6 @@ class PayrollController extends Controller {
         }
 
         $deductions = (float)($_POST['deductions'] ?? 0);
-        if (!empty($_POST['auto_calc'])) {
-            $calc       = $salaryModel->calcFromAttendance($userId, $month, $year, $base);
-            $deductions = $calc['deductions'];
-        }
 
         $data = [
             'user_id'        => $userId,

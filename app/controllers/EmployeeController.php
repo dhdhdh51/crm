@@ -91,9 +91,6 @@ class EmployeeController extends Controller {
         $this->verifyCsrf();
         if (!Session::can(['admin','super_admin','hr'])) $this->abort(403);
 
-        $geoLat = $_POST['geo_lat'] !== '' ? (float)$_POST['geo_lat'] : null;
-        $geoLng = $_POST['geo_lng'] !== '' ? (float)$_POST['geo_lng'] : null;
-
         $data = [
             'name'        => $this->sanitize($_POST['name'] ?? ''),
             'email'       => $this->sanitize($_POST['email'] ?? ''),
@@ -103,9 +100,6 @@ class EmployeeController extends Controller {
             'department'  => $this->sanitize($_POST['department'] ?? ''),
             'join_date'   => !empty($_POST['join_date']) ? $_POST['join_date'] : null,
             'is_active'   => isset($_POST['is_active']) ? 1 : 0,
-            'geo_lat'     => $geoLat,
-            'geo_lng'     => $geoLng,
-            'geo_radius'  => !empty($_POST['geo_radius']) ? max(50, (int)$_POST['geo_radius']) : 100,
         ];
 
         if (!empty($_POST['password'])) {

@@ -54,18 +54,6 @@ $router->group(['AuthMiddleware'], function ($r) {
     $r->post('/notifications/read-all', 'NotificationController@markAllRead');
     $r->get('/notifications/unread',    'NotificationController@unreadCount');
 
-    // Attendance
-    $r->get('/attendance',                  'AttendanceController@index');
-    $r->get('/attendance/checkin',          'AttendanceController@checkin');
-    $r->post('/attendance/mark-face',       'AttendanceController@markByFace');
-    $r->get('/attendance/descriptors',      'AttendanceController@descriptors');
-    $r->get('/attendance/enroll',           'AttendanceController@enroll');
-    $r->get('/attendance/enroll/{id}',      'AttendanceController@enroll');
-    $r->post('/attendance/save-descriptor', 'AttendanceController@saveDescriptor');
-    $r->post('/attendance/manual',          'AttendanceController@manualMark');
-    $r->post('/attendance/checkout-manual', 'AttendanceController@checkoutManual');
-    $r->get('/attendance/report',           'AttendanceController@report');
-
     // Salary slips — ownership enforced in controller
     $r->get('/my-slips',           'PayrollController@mySlips');
     $r->get('/payroll/{id}/slip',  'PayrollController@slip');
@@ -97,16 +85,11 @@ $router->group(['AuthMiddleware'], function ($r) {
         $r->post('/expenses/{id}/delete',  'ExpenseController@delete');
     });
 
-    // Settings (admin/super_admin) — inside auth, enforced in controller
-    $r->get('/settings',         'SettingsController@index');
-    $r->post('/settings/office', 'SettingsController@saveOffice');
-
     // ── Admin + Super Admin only ─────────────────────────────────
     $r->group(['AdminMiddleware'], function ($r) {
         $r->get('/payroll',                  'PayrollController@index');
         $r->get('/payroll/create',           'PayrollController@create');
-        $r->get('/payroll/calc-attendance',  'PayrollController@calcAttendance');
-        $r->post('/payroll/store',           'PayrollController@store');
+$r->post('/payroll/store',           'PayrollController@store');
         $r->post('/payroll/{id}/delete',     'PayrollController@delete');
     });
 });
